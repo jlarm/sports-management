@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import TeamsController from '@/actions/App/Http/Controllers/Teams/TeamsController';
 import Heading from '@/components/Heading.vue';
@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index as teamsIndex } from '@/routes/teams';
+import { show as rosterShow } from '@/routes/teams/roster';
 
 type Team = {
     id: number;
@@ -200,6 +201,9 @@ const defaultDivisionForNew = computed(() => props.divisions[0]?.id ?? '');
                             </p>
                         </div>
                         <div class="flex flex-wrap gap-2">
+                            <Button as-child variant="secondary">
+                                <Link :href="rosterShow(team.id)">Roster</Link>
+                            </Button>
                             <Button
                                 type="button"
                                 variant="ghost"

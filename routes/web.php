@@ -10,6 +10,7 @@ use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
 use App\Http\Controllers\Settings\SeasonsController;
+use App\Http\Controllers\Teams\RosterController;
 use App\Http\Controllers\Teams\TeamsController;
 use App\Http\Controllers\Tenancy\SwitchOrganizationController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,13 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [TeamsController::class, 'store'])->name('store');
         Route::patch('{team}', [TeamsController::class, 'update'])->name('update');
         Route::delete('{team}', [TeamsController::class, 'destroy'])->name('destroy');
+
+        Route::prefix('{team}/roster')->name('roster.')->group(function () {
+            Route::get('/', [RosterController::class, 'show'])->name('show');
+            Route::post('/', [RosterController::class, 'store'])->name('store');
+            Route::patch('{rosterEntry}', [RosterController::class, 'update'])->name('update');
+            Route::delete('{rosterEntry}', [RosterController::class, 'destroy'])->name('destroy');
+        });
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

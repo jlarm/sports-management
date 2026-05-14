@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -42,5 +44,24 @@ final class Team extends Model
     public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class);
+    }
+
+    /**
+     * @return BelongsToMany<Player, $this, TeamPlayer, 'pivot'>
+     */
+    public function players(): BelongsToMany
+    {
+        return $this->belongsToMany(Player::class, 'team_player')
+            ->using(TeamPlayer::class)
+            ->withPivot(['id', 'jersey_number', 'primary_position', 'is_captain'])
+            ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<TeamPlayer, $this>
+     */
+    public function rosterEntries(): HasMany
+    {
+        return $this->hasMany(TeamPlayer::class);
     }
 }

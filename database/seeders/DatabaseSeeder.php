@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Player;
 use App\Models\Season;
 use App\Models\Team;
+use App\Models\TeamPlayer;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -117,10 +118,11 @@ final class DatabaseSeeder extends Seeder
             ['Garcia', 'Sofia', '2014-12-01', BattingHand::Right, ThrowingHand::Right, null],
         ];
 
+        $createdPlayers = [];
         foreach ($players as [$lastName, $firstName, $dob, $bats, $throws, $externalId]) {
             $birthYear = (int) mb_substr($dob, 0, 4);
 
-            Player::factory()->for($organization)->create([
+            $createdPlayers[$lastName] = Player::factory()->for($organization)->create([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'dob' => $dob,
@@ -134,21 +136,42 @@ final class DatabaseSeeder extends Seeder
         }
 
         $teams = [
-            [$springSeason, '10U', '10U Red'],
-            [$springSeason, '10U', '10U Blue'],
-            [$springSeason, '12U', '12U Gold'],
-            [$springSeason, '14U', '14U Black'],
-            [$springSeason, 'Varsity', 'Varsity'],
-            [$fallSeason, '10U', '10U Red'],
-            [$fallSeason, '12U', '12U Gold'],
+            'spring-10u-red' => [$springSeason, '10U', '10U Red'],
+            'spring-10u-blue' => [$springSeason, '10U', '10U Blue'],
+            'spring-12u-gold' => [$springSeason, '12U', '12U Gold'],
+            'spring-14u-black' => [$springSeason, '14U', '14U Black'],
+            'spring-varsity' => [$springSeason, 'Varsity', 'Varsity'],
+            'fall-10u-red' => [$fallSeason, '10U', '10U Red'],
+            'fall-12u-gold' => [$fallSeason, '12U', '12U Gold'],
         ];
 
-        foreach ($teams as [$season, $divisionName, $teamName]) {
-            Team::factory()->for($organization)->create([
+        $createdTeams = [];
+        foreach ($teams as $key => [$season, $divisionName, $teamName]) {
+            $createdTeams[$key] = Team::factory()->for($organization)->create([
                 'season_id' => $season->id,
                 'division_id' => $divisions[$divisionName]->id,
                 'name' => $teamName,
                 'slug' => Str::slug($teamName),
+            ]);
+        }
+
+        $roster = [
+            ['spring-10u-red', 'Lopez', 7, 'SS', true],
+            ['spring-10u-red', 'Nguyen', 22, 'CF', false],
+            ['spring-10u-red', 'Patel', 3, '2B', false],
+            ['spring-12u-gold', 'Bennett', 11, 'P', true],
+            ['spring-12u-gold', 'O\'Connor', 5, 'C', false],
+            ['spring-14u-black', 'Adams', 9, '1B', true],
+            ['spring-14u-black', 'Garcia', 14, 'LF', false],
+        ];
+
+        foreach ($roster as [$teamKey, $playerLastName, $jersey, $position, $captain]) {
+            TeamPlayer::create([
+                'team_id' => $createdTeams[$teamKey]->id,
+                'player_id' => $createdPlayers[$playerLastName]->id,
+                'jersey_number' => $jersey,
+                'primary_position' => $position,
+                'is_captain' => $captain,
             ]);
         }
     }

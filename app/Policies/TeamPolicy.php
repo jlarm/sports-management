@@ -48,6 +48,16 @@ final readonly class TeamPolicy
         return $this->update($user, $team);
     }
 
+    public function viewRoster(User $user, Team $team): bool
+    {
+        return $this->view($user, $team);
+    }
+
+    public function manageRoster(User $user, Team $team): bool
+    {
+        return $this->update($user, $team);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

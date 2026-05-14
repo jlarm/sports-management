@@ -12,6 +12,7 @@ use Database\Factories\PlayerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -50,6 +51,17 @@ final class Player extends Model
 
     /** @use HasFactory<PlayerFactory> */
     use HasFactory, SoftDeletes;
+
+    /**
+     * @return BelongsToMany<Team, $this, TeamPlayer, 'pivot'>
+     */
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_player')
+            ->using(TeamPlayer::class)
+            ->withPivot(['id', 'jersey_number', 'primary_position', 'is_captain'])
+            ->withTimestamps();
+    }
 
     /**
      * @return array<string, string>
