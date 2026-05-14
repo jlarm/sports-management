@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatDate } from '@/lib/utils';
 import { index as seasonsIndex } from '@/routes/seasons';
 
 type Season = {
@@ -97,7 +98,7 @@ function dialogTitle() {
                         </Badge>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                        {{ season.start_date }} → {{ season.end_date }}
+                        {{ formatDate(season.start_date) }} → {{ formatDate(season.end_date) }}
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">

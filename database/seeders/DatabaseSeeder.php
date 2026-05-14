@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Enums\OrganizationRole;
 use App\Models\Division;
+use App\Models\Invitation;
 use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Season;
@@ -70,6 +71,34 @@ final class DatabaseSeeder extends Seeder
             'name' => 'Mills Park Diamond',
             'address' => '1029 Mills Park Dr, Cary, NC 27519',
             'maps_link' => null,
+        ]);
+
+        Invitation::factory()->for($organization)->create([
+            'email' => 'new-coach@example.com',
+            'role' => OrganizationRole::Coach->value,
+            'invited_by_user_id' => $user->id,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        Invitation::factory()->for($organization)->create([
+            'email' => 'assistant-admin@example.com',
+            'role' => OrganizationRole::Admin->value,
+            'invited_by_user_id' => $user->id,
+            'expires_at' => now()->addDays(3),
+        ]);
+
+        Invitation::factory()->for($organization)->revoked()->create([
+            'email' => 'changed-our-mind@example.com',
+            'role' => OrganizationRole::Coach->value,
+            'invited_by_user_id' => $user->id,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        Invitation::factory()->for($organization)->accepted()->create([
+            'email' => 'past-coach@example.com',
+            'role' => OrganizationRole::Coach->value,
+            'invited_by_user_id' => $user->id,
+            'expires_at' => now()->subDays(30),
         ]);
     }
 }
