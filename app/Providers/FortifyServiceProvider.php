@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
@@ -11,10 +13,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Inertia\Response;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
-class FortifyServiceProvider extends ServiceProvider
+final class FortifyServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
@@ -54,11 +57,16 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::resetPasswordView(function (Request $request): Response {
+            $passwordRule = Password::defaults();
+            assert($passwordRule instanceof Password);
+
+            return Inertia::render('auth/ResetPassword', [
+                'email' => $request->email,
+                'token' => $request->route('token'),
+                'passwordRules' => $passwordRule->toPasswordRulesString(),
+            ]);
+        });
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/ForgotPassword', [
             'status' => $request->session()->get('status'),
@@ -68,9 +76,14 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::registerView(function (): Response {
+            $passwordRule = Password::defaults();
+            assert($passwordRule instanceof Password);
+
+            return Inertia::render('auth/Register', [
+                'passwordRules' => $passwordRule->toPasswordRulesString(),
+            ]);
+        });
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
 
@@ -87,7 +100,7 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate($request->string(Fortify::username())->lower().'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });
