@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SeasonsController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -36,4 +37,14 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::patch('{season}', [SeasonsController::class, 'update'])->name('update');
         Route::delete('{season}', [SeasonsController::class, 'destroy'])->name('destroy');
         Route::post('{season}/activate', [SeasonsController::class, 'activate'])->name('activate');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('settings/divisions')
+    ->name('divisions.')
+    ->group(function () {
+        Route::get('/', [DivisionsController::class, 'index'])->name('index');
+        Route::post('/', [DivisionsController::class, 'store'])->name('store');
+        Route::patch('{division}', [DivisionsController::class, 'update'])->name('update');
+        Route::delete('{division}', [DivisionsController::class, 'destroy'])->name('destroy');
     });
