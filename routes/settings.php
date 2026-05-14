@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Settings\DivisionsController;
+use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SeasonsController;
@@ -58,4 +59,13 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [LocationsController::class, 'store'])->name('store');
         Route::patch('{location}', [LocationsController::class, 'update'])->name('update');
         Route::delete('{location}', [LocationsController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('settings/invitations')
+    ->name('invitations.')
+    ->group(function () {
+        Route::get('/', [InvitationsController::class, 'index'])->name('index');
+        Route::post('/', [InvitationsController::class, 'store'])->name('store');
+        Route::delete('{invitation}', [InvitationsController::class, 'destroy'])->name('destroy');
     });

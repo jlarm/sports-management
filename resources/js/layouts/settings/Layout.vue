@@ -7,6 +7,7 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { index as divisionsIndex } from '@/routes/divisions';
+import { index as invitationsIndex } from '@/routes/invitations';
 import { index as locationsIndex } from '@/routes/locations';
 import { edit as editProfile } from '@/routes/profile';
 import { index as seasonsIndex } from '@/routes/seasons';
@@ -33,6 +34,10 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Locations',
         href: locationsIndex(),
+    },
+    {
+        title: 'Invitations',
+        href: invitationsIndex(),
     },
     {
         title: 'Appearance',
