@@ -92,13 +92,19 @@ function dialogTitle() {
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
                         <span class="font-medium">{{ season.name }}</span>
-                        <Badge v-if="season.is_active" variant="default">Active</Badge>
-                        <Badge v-if="season.is_registration_open" variant="secondary">
+                        <Badge v-if="season.is_active" variant="default"
+                            >Active</Badge
+                        >
+                        <Badge
+                            v-if="season.is_registration_open"
+                            variant="secondary"
+                        >
                             Registration open
                         </Badge>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                        {{ formatDate(season.start_date) }} → {{ formatDate(season.end_date) }}
+                        {{ formatDate(season.start_date) }} →
+                        {{ formatDate(season.end_date) }}
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -108,11 +114,19 @@ function dialogTitle() {
                         class="inline"
                         v-slot="{ processing }"
                     >
-                        <Button type="submit" variant="secondary" :disabled="processing">
+                        <Button
+                            type="submit"
+                            variant="secondary"
+                            :disabled="processing"
+                        >
                             Activate
                         </Button>
                     </Form>
-                    <Button type="button" variant="ghost" @click="openEdit(season)">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        @click="openEdit(season)"
+                    >
                         Edit
                     </Button>
                     <Form
@@ -138,7 +152,8 @@ function dialogTitle() {
                 <DialogHeader>
                     <DialogTitle>{{ dialogTitle() }}</DialogTitle>
                     <DialogDescription>
-                        Seasons keep teams, rosters, and games scoped to a single competition window.
+                        Seasons keep teams, rosters, and games scoped to a
+                        single competition window.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -199,14 +214,20 @@ function dialogTitle() {
                             :checked="editing?.is_registration_open ?? false"
                             class="h-4 w-4 rounded border-input"
                         />
-                        <Label for="is_registration_open" class="cursor-pointer">
+                        <Label
+                            for="is_registration_open"
+                            class="cursor-pointer"
+                        >
                             Registration open
                         </Label>
                     </div>
 
                     <DialogFooter>
                         <Button type="button" variant="ghost" as-child>
-                            <Link :href="seasonsIndex()" @click.prevent="dialogOpen = false">
+                            <Link
+                                :href="seasonsIndex()"
+                                @click.prevent="dialogOpen = false"
+                            >
                                 Cancel
                             </Link>
                         </Button>

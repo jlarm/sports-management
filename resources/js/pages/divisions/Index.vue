@@ -64,7 +64,11 @@ function dialogTitle() {
                 title="Divisions"
                 description="Age groups and skill levels that teams roll up into (e.g., 10U, 12U, Varsity)."
             />
-            <Button type="button" @click="openCreate" data-test="create-division">
+            <Button
+                type="button"
+                @click="openCreate"
+                data-test="create-division"
+            >
                 New division
             </Button>
         </div>
@@ -91,7 +95,11 @@ function dialogTitle() {
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <Button type="button" variant="ghost" @click="openEdit(division)">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        @click="openEdit(division)"
+                    >
                         Edit
                     </Button>
                     <Form
@@ -117,7 +125,8 @@ function dialogTitle() {
                 <DialogHeader>
                     <DialogTitle>{{ dialogTitle() }}</DialogTitle>
                     <DialogDescription>
-                        Divisions group teams by age or skill level. They persist across seasons.
+                        Divisions group teams by age or skill level. They
+                        persist across seasons.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -158,7 +167,10 @@ function dialogTitle() {
 
                     <DialogFooter>
                         <Button type="button" variant="ghost" as-child>
-                            <Link :href="divisionsIndex()" @click.prevent="dialogOpen = false">
+                            <Link
+                                :href="divisionsIndex()"
+                                @click.prevent="dialogOpen = false"
+                            >
                                 Cancel
                             </Link>
                         </Button>

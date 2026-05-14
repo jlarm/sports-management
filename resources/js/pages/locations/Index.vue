@@ -65,7 +65,11 @@ function dialogTitle() {
                 title="Locations"
                 description="Fields, parks, and facilities your teams play and practice at."
             />
-            <Button type="button" @click="openCreate" data-test="create-location">
+            <Button
+                type="button"
+                @click="openCreate"
+                data-test="create-location"
+            >
                 New location
             </Button>
         </div>
@@ -87,7 +91,10 @@ function dialogTitle() {
             >
                 <div class="space-y-1">
                     <span class="font-medium">{{ location.name }}</span>
-                    <p v-if="location.address" class="text-xs text-muted-foreground">
+                    <p
+                        v-if="location.address"
+                        class="text-xs text-muted-foreground"
+                    >
                         {{ location.address }}
                     </p>
                     <a
@@ -95,13 +102,17 @@ function dialogTitle() {
                         :href="location.maps_link"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-xs underline text-muted-foreground hover:text-foreground"
+                        class="text-xs text-muted-foreground underline hover:text-foreground"
                     >
                         View on map
                     </a>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <Button type="button" variant="ghost" @click="openEdit(location)">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        @click="openEdit(location)"
+                    >
                         Edit
                     </Button>
                     <Form
@@ -127,7 +138,8 @@ function dialogTitle() {
                 <DialogHeader>
                     <DialogTitle>{{ dialogTitle() }}</DialogTitle>
                     <DialogDescription>
-                        Locations persist across seasons. Schedule games and practices to a known field.
+                        Locations persist across seasons. Schedule games and
+                        practices to a known field.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -181,7 +193,10 @@ function dialogTitle() {
 
                     <DialogFooter>
                         <Button type="button" variant="ghost" as-child>
-                            <Link :href="locationsIndex()" @click.prevent="dialogOpen = false">
+                            <Link
+                                :href="locationsIndex()"
+                                @click.prevent="dialogOpen = false"
+                            >
                                 Cancel
                             </Link>
                         </Button>

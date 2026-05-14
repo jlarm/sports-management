@@ -46,7 +46,10 @@ defineOptions({
 
 const dialogOpen = ref(false);
 
-const statusVariant: Record<Invitation['status'], 'default' | 'secondary' | 'outline'> = {
+const statusVariant: Record<
+    Invitation['status'],
+    'default' | 'secondary' | 'outline'
+> = {
     pending: 'default',
     accepted: 'secondary',
     declined: 'outline',
@@ -69,7 +72,11 @@ function statusLabel(status: Invitation['status']) {
                 title="Invitations"
                 :description="`Invite admins, coaches, and guardians to ${organizationName}.`"
             />
-            <Button type="button" @click="dialogOpen = true" data-test="create-invitation">
+            <Button
+                type="button"
+                @click="dialogOpen = true"
+                data-test="create-invitation"
+            >
                 Invite person
             </Button>
         </div>
@@ -97,8 +104,11 @@ function statusLabel(status: Invitation['status']) {
                         </Badge>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                        {{ invitation.role }} · expires {{ formatDateTime(invitation.expires_at) }}
-                        <span v-if="invitation.invited_by"> · invited by {{ invitation.invited_by }}</span>
+                        {{ invitation.role }} · expires
+                        {{ formatDateTime(invitation.expires_at) }}
+                        <span v-if="invitation.invited_by">
+                            · invited by {{ invitation.invited_by }}</span
+                        >
                     </p>
                 </div>
                 <Form
@@ -124,7 +134,8 @@ function statusLabel(status: Invitation['status']) {
                 <DialogHeader>
                     <DialogTitle>Invite person</DialogTitle>
                     <DialogDescription>
-                        We'll email them a link to accept the invitation. It expires in 7 days.
+                        We'll email them a link to accept the invitation. It
+                        expires in 7 days.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -163,7 +174,11 @@ function statusLabel(status: Invitation['status']) {
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="ghost" @click="dialogOpen = false">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            @click="dialogOpen = false"
+                        >
                             Cancel
                         </Button>
                         <Button type="submit" :disabled="processing">

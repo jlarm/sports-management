@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import PlayersController from '@/actions/App/Http/Controllers/Players/PlayersController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
-    DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
@@ -70,12 +69,21 @@ function dialogTitle() {
 const today = new Date();
 function ageAt(dobIso: string): number | null {
     const dob = new Date(dobIso);
-    if (Number.isNaN(dob.getTime())) return null;
+
+    if (Number.isNaN(dob.getTime())) {
+        return null;
+    }
+
     let age = today.getFullYear() - dob.getFullYear();
     const beforeBirthday =
         today.getMonth() < dob.getMonth() ||
-        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
-    if (beforeBirthday) age -= 1;
+        (today.getMonth() === dob.getMonth() &&
+            today.getDate() < dob.getDate());
+
+    if (beforeBirthday) {
+        age -= 1;
+    }
+
     return age;
 }
 
@@ -125,15 +133,18 @@ const throwingOptions = ['R', 'L'] as const;
                         <span v-if="player.graduation_year">
                             · class of {{ player.graduation_year }}</span
                         >
-                        <span v-if="player.bats || player.throws"
-                            >
+                        <span v-if="player.bats || player.throws">
                             · bats {{ player.bats ?? '—' }} / throws
                             {{ player.throws ?? '—' }}</span
                         >
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <Button type="button" variant="ghost" @click="openEdit(player)">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        @click="openEdit(player)"
+                    >
                         Edit
                     </Button>
                     <Form
@@ -159,7 +170,8 @@ const throwingOptions = ['R', 'L'] as const;
                 <DialogHeader>
                     <DialogTitle>{{ dialogTitle() }}</DialogTitle>
                     <DialogDescription>
-                        Player records persist across seasons and feed every roster.
+                        Player records persist across seasons and feed every
+                        roster.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -313,8 +325,8 @@ const throwingOptions = ['R', 'L'] as const;
                             name="medical_notes"
                             rows="2"
                             class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus:outline-none"
-                            >{{ editing?.medical_notes ?? '' }}</textarea
-                        >
+                            :value="editing?.medical_notes ?? ''"
+                        ></textarea>
                         <InputError :message="errors.medical_notes" />
                     </div>
 
@@ -325,8 +337,8 @@ const throwingOptions = ['R', 'L'] as const;
                             name="notes"
                             rows="2"
                             class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus:outline-none"
-                            >{{ editing?.notes ?? '' }}</textarea
-                        >
+                            :value="editing?.notes ?? ''"
+                        ></textarea>
                         <InputError :message="errors.notes" />
                     </div>
 
