@@ -17,6 +17,7 @@ use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Player;
 use App\Models\Season;
+use App\Models\Submission;
 use App\Models\Team;
 use App\Models\TeamPlayer;
 use App\Models\TeamUser;
@@ -194,7 +195,7 @@ final class DatabaseSeeder extends Seeder
             ]);
         }
 
-        Form::factory()->for($organization)->published()->create([
+        $springForm = Form::factory()->for($organization)->published()->create([
             'title' => '2026 Spring Registration',
             'description' => 'Roster and contact info for the Spring 2026 season.',
             'schema' => [
@@ -269,5 +270,49 @@ final class DatabaseSeeder extends Seeder
                 ],
             ],
         ]);
+
+        $springFormFresh = $springForm->fresh();
+        $submissions = [
+            [
+                'first_name' => 'Riley',
+                'last_name' => 'Carter',
+                'dob' => '2014-07-19',
+                'jersey_size' => 'YM',
+                'allergies' => '',
+                'parent_email' => 'rcarter@example.com',
+                'parent_phone' => '919-555-0102',
+                'media_release' => '1',
+            ],
+            [
+                'first_name' => 'Sofia',
+                'last_name' => 'Murphy',
+                'dob' => '2013-10-04',
+                'jersey_size' => 'YL',
+                'allergies' => 'Peanut allergy — carries an EpiPen.',
+                'parent_email' => 'jmurphy@example.com',
+                'parent_phone' => '919-555-0144',
+                'media_release' => '1',
+            ],
+            [
+                'first_name' => 'Tyrese',
+                'last_name' => 'Bell',
+                'dob' => '2015-03-29',
+                'jersey_size' => 'YS',
+                'allergies' => '',
+                'parent_email' => 'kbell@example.com',
+                'parent_phone' => '919-555-0167',
+                'media_release' => '',
+            ],
+        ];
+
+        foreach ($submissions as $data) {
+            Submission::factory()->for($organization)->for($springFormFresh)->create([
+                'submitted_by_user_id' => null,
+                'schema_snapshot' => $springFormFresh->schema,
+                'schema_version' => $springFormFresh->schema_version,
+                'data' => $data,
+                'submitted_at' => now()->subDays(random_int(1, 14)),
+            ]);
+        }
     }
 }

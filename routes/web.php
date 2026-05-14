@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Forms\FormsController;
+use App\Http\Controllers\Forms\PublicFormController;
+use App\Http\Controllers\Forms\SubmissionsController;
 use App\Http\Controllers\Invitations\AcceptInvitationController;
 use App\Http\Controllers\Invitations\DeclineInvitationController;
 use App\Http\Controllers\Invitations\ShowInvitationController;
@@ -22,6 +24,17 @@ use Laravel\Fortify\Features;
 Route::get('/', fn () => Inertia::render('Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ]))->name('home');
+
+Route::get('f/{form}', [PublicFormController::class, 'show'])
+    ->whereNumber('form')
+    ->name('public-forms.show');
+Route::post('f/{form}', [PublicFormController::class, 'submit'])
+    ->whereNumber('form')
+    ->middleware('throttle:6,1')
+    ->name('public-forms.submit');
+Route::get('f/{form}/thanks', [PublicFormController::class, 'thanks'])
+    ->whereNumber('form')
+    ->name('public-forms.thanks');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
@@ -60,6 +73,11 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::delete('{form}', [FormsController::class, 'destroy'])->name('destroy');
         Route::post('{form}/publish', [FormsController::class, 'publish'])->name('publish');
         Route::post('{form}/close', [FormsController::class, 'close'])->name('close');
+
+        Route::prefix('{form}/submissions')->name('submissions.')->group(function () {
+            Route::get('/', [SubmissionsController::class, 'index'])->name('index');
+            Route::get('{submission}', [SubmissionsController::class, 'show'])->name('show');
+        });
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

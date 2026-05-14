@@ -58,6 +58,13 @@ final readonly class FormPolicy
         return $this->update($user, $form);
     }
 
+    public function viewSubmissions(User $user, Form $form): bool
+    {
+        return $this->tenant->isResolved()
+            && $form->organization_id === $this->tenant->id()
+            && $this->canManageCurrentOrg($user);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

@@ -17,6 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index as formsIndex, edit as formEdit } from '@/routes/forms';
+import { index as formSubmissions } from '@/routes/forms/submissions';
+import { show as publicFormShow } from '@/routes/public-forms';
 
 type FormSummary = {
     id: number;
@@ -94,6 +96,18 @@ const statusVariant: Record<
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <Button
+                        v-if="form.status === 'published'"
+                        as-child
+                        variant="ghost"
+                    >
+                        <a :href="publicFormShow(form.id).url" target="_blank">
+                            Open public URL
+                        </a>
+                    </Button>
+                    <Button as-child variant="ghost">
+                        <Link :href="formSubmissions(form.id)">Submissions</Link>
+                    </Button>
                     <Button as-child variant="ghost">
                         <Link :href="formEdit(form.id)">Edit</Link>
                     </Button>

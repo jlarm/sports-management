@@ -10,6 +10,7 @@ use Database\Factories\FormFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $title
  * @property ?string $description
  * @property FormStatus $status
- * @property array<int, array<string, mixed>> $schema
+ * @property array{fields: array<int, array<string, mixed>>} $schema
  * @property int $schema_version
  */
 #[Fillable(['title', 'description', 'status', 'schema', 'schema_version'])]
@@ -42,6 +43,14 @@ final class Form extends Model
     public function isClosed(): bool
     {
         return $this->status === FormStatus::Closed;
+    }
+
+    /**
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class);
     }
 
     /**
