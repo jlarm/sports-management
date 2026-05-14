@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, setLayoutProps, useForm } from '@inertiajs/vue3';
-import { GripVertical, Trash2 } from 'lucide-vue-next';
+import {
+    AlignLeft,
+    Calendar,
+    CheckSquare,
+    GripVertical,
+    Hash,
+    List,
+    Plus,
+    Trash2,
+    Type,
+    type LucideIcon,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import draggable from 'vuedraggable';
 import Heading from '@/components/Heading.vue';
@@ -11,10 +22,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index as formsIndex, edit as formEdit, update as formUpdate } from '@/routes/forms';
 
+type FieldTypeValue =
+    | 'text'
+    | 'textarea'
+    | 'number'
+    | 'date'
+    | 'select'
+    | 'checkbox';
+
 type FieldShape = {
     key: string;
     label: string;
-    type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'checkbox';
+    type: FieldTypeValue;
     required: boolean;
     placeholder?: string | null;
     options?: string[];
@@ -33,7 +52,7 @@ type FormShape = {
 };
 
 type FieldTypeOption = {
-    value: string;
+    value: FieldTypeValue;
     label: string;
     requires_options: boolean;
 };
@@ -49,6 +68,24 @@ setLayoutProps({
         { title: props.form.title, href: formEdit(props.form.id) },
     ],
 });
+
+const fieldTypeIcons: Record<FieldTypeValue, LucideIcon> = {
+    text: Type,
+    textarea: AlignLeft,
+    number: Hash,
+    date: Calendar,
+    select: List,
+    checkbox: CheckSquare,
+};
+
+const fieldTypeDescriptions: Record<FieldTypeValue, string> = {
+    text: 'Single-line input',
+    textarea: 'Multi-line input',
+    number: 'Numeric value',
+    date: 'Date picker',
+    select: 'Choice from a list',
+    checkbox: 'Yes / no toggle',
+};
 
 let nextUid = 0;
 
@@ -69,31 +106,42 @@ const builder = useForm({
             required: field.required,
             placeholder: field.placeholder ?? '',
             options: field.options ?? [],
-        })),
+        })) as DraggableField[],
     },
 });
 
 const readOnly = computed(() => props.form.status === 'closed');
 
-function addField() {
-    builder.schema.fields.push({
+function fieldTypeRequiresOptions(type: string): boolean {
+    return (
+        props.fieldTypeOptions.find((option) => option.value === type)
+            ?.requires_options ?? false
+    );
+}
+
+function blankFieldOfType(type: FieldTypeValue): DraggableField {
+    return {
         _uid: makeUid(),
         key: '',
         label: '',
-        type: 'text',
+        type,
         required: false,
         placeholder: '',
         options: [],
-    });
+    };
+}
+
+function appendField(type: FieldTypeValue) {
+    if (readOnly.value) return;
+    builder.schema.fields.push(blankFieldOfType(type));
+}
+
+function cloneFromPalette(item: FieldTypeOption): DraggableField {
+    return blankFieldOfType(item.value);
 }
 
 function removeField(index: number) {
     builder.schema.fields.splice(index, 1);
-}
-
-function fieldTypeRequiresOptions(type: string): boolean {
-    return props.fieldTypeOptions.find((option) => option.value === type)
-        ?.requires_options ?? false;
 }
 
 const newOption = ref<Record<number, string>>({});
@@ -143,7 +191,9 @@ function fieldError(index: number, attr: string): string | undefined {
     <Head :title="`Edit ${form.title}`" />
 
     <div class="flex flex-col space-y-6 px-4 py-6 md:px-6">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div
+            class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+        >
             <Heading
                 variant="small"
                 :title="`Edit ${form.title}`"
@@ -165,208 +215,296 @@ function fieldError(index: number, attr: string): string | undefined {
         </div>
 
         <form class="space-y-6" @submit.prevent="submit">
-            <div class="grid gap-2">
-                <Label for="title">Title</Label>
-                <Input
-                    id="title"
-                    v-model="builder.title"
-                    required
-                    :disabled="readOnly"
-                />
-                <InputError :message="builder.errors.title" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="description">Description</Label>
-                <textarea
-                    id="description"
-                    v-model="builder.description"
-                    rows="2"
-                    :disabled="readOnly"
-                    class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus:outline-none disabled:opacity-60"
-                ></textarea>
-                <InputError :message="builder.errors.description" />
-            </div>
-
-            <section class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-base font-semibold">Fields</h2>
-                    <Button
-                        type="button"
-                        variant="secondary"
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-2">
+                    <Label for="title">Title</Label>
+                    <Input
+                        id="title"
+                        v-model="builder.title"
+                        required
                         :disabled="readOnly"
-                        @click="addField"
-                        data-test="add-field"
-                    >
-                        Add field
-                    </Button>
+                    />
+                    <InputError :message="builder.errors.title" />
                 </div>
-                <p
-                    v-if="builder.errors.schema"
-                    class="text-sm text-destructive"
-                >
-                    {{ builder.errors.schema }}
-                </p>
+                <div class="grid gap-2">
+                    <Label for="description">Description</Label>
+                    <Input
+                        id="description"
+                        v-model="builder.description"
+                        :disabled="readOnly"
+                        placeholder="Visible to people filling out the form"
+                    />
+                    <InputError :message="builder.errors.description" />
+                </div>
+            </div>
 
-                <draggable
-                    v-model="builder.schema.fields"
-                    tag="ul"
-                    item-key="_uid"
-                    handle=".drag-handle"
-                    :disabled="readOnly"
-                    :animation="150"
-                    ghost-class="opacity-50"
-                    class="space-y-4"
-                >
-                    <template #item="{ element: field, index }">
-                        <li
-                            class="space-y-3 rounded-lg border bg-card p-4"
-                            :data-test="`field-row-${index}`"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        class="drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 active:cursor-grabbing"
-                                        :disabled="readOnly"
-                                        :aria-label="`Drag field ${index + 1}`"
-                                    >
-                                        <GripVertical class="size-4" />
-                                    </button>
-                                    <span class="text-xs text-muted-foreground">
-                                        #{{ index + 1 }}
-                                    </span>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    class="text-destructive"
-                                    :disabled="readOnly"
-                                    @click="removeField(index)"
-                                >
-                                    <Trash2 class="size-4" />
-                                </Button>
-                            </div>
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div class="grid gap-2">
-                                    <Label :for="`field-key-${field._uid}`">Key</Label>
-                                    <Input
-                                        :id="`field-key-${field._uid}`"
-                                        v-model="field.key"
-                                        placeholder="first_name"
-                                        :disabled="readOnly"
-                                    />
-                                    <InputError :message="fieldError(index, 'key')" />
-                                </div>
-                                <div class="grid gap-2">
-                                    <Label :for="`field-label-${field._uid}`">Label</Label>
-                                    <Input
-                                        :id="`field-label-${field._uid}`"
-                                        v-model="field.label"
-                                        placeholder="First name"
-                                        :disabled="readOnly"
-                                    />
-                                    <InputError
-                                        :message="fieldError(index, 'label')"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div class="grid gap-2">
-                                    <Label :for="`field-type-${field._uid}`">Type</Label>
-                                    <select
-                                        :id="`field-type-${field._uid}`"
-                                        v-model="field.type"
-                                        :disabled="readOnly"
-                                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none disabled:opacity-60"
-                                    >
-                                        <option
-                                            v-for="option in fieldTypeOptions"
-                                            :key="option.value"
-                                            :value="option.value"
-                                        >
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
-                                    <InputError
-                                        :message="fieldError(index, 'type')"
-                                    />
-                                </div>
-                                <div class="grid gap-2">
-                                    <Label :for="`field-placeholder-${field._uid}`">
-                                        Placeholder
-                                    </Label>
-                                    <Input
-                                        :id="`field-placeholder-${field._uid}`"
-                                        v-model="field.placeholder"
-                                        :disabled="readOnly"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <input
-                                    :id="`field-required-${field._uid}`"
-                                    v-model="field.required"
-                                    type="checkbox"
-                                    :disabled="readOnly"
-                                    class="h-4 w-4 rounded border-input"
-                                />
-                                <Label
-                                    :for="`field-required-${field._uid}`"
-                                    class="cursor-pointer"
-                                >
-                                    Required
-                                </Label>
-                            </div>
-
-                            <div
-                                v-if="fieldTypeRequiresOptions(field.type)"
-                                class="space-y-2 rounded-md border border-dashed p-3"
+            <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
+                <aside class="space-y-3">
+                    <h2 class="text-sm font-semibold uppercase text-muted-foreground">
+                        Add element
+                    </h2>
+                    <draggable
+                        :model-value="fieldTypeOptions"
+                        :group="{ name: 'fields', pull: 'clone', put: false }"
+                        :sort="false"
+                        :clone="cloneFromPalette"
+                        item-key="value"
+                        :disabled="readOnly"
+                        :animation="150"
+                        ghost-class="opacity-40"
+                        tag="ul"
+                        class="space-y-2"
+                    >
+                        <template #item="{ element: option }">
+                            <li
+                                class="flex cursor-grab items-center justify-between rounded-lg border bg-card p-3 text-sm shadow-sm hover:border-primary active:cursor-grabbing"
+                                :data-test="`palette-${option.value}`"
                             >
-                                <Label>Options</Label>
-                                <ul class="space-y-1">
-                                    <li
-                                        v-for="(option, optionIndex) in field.options"
-                                        :key="optionIndex"
-                                        class="flex items-center justify-between gap-2 rounded border bg-muted/40 px-3 py-1 text-sm"
+                                <span class="flex items-center gap-3">
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground"
                                     >
-                                        <span>{{ option }}</span>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            :disabled="readOnly"
-                                            @click="removeOption(field, optionIndex)"
+                                        <component
+                                            :is="fieldTypeIcons[option.value]"
+                                            class="size-4"
+                                        />
+                                    </span>
+                                    <span>
+                                        <span class="block font-medium">
+                                            {{ option.label }}
+                                        </span>
+                                        <span
+                                            class="block text-xs text-muted-foreground"
                                         >
-                                            <Trash2 class="size-3" />
-                                        </Button>
-                                    </li>
-                                </ul>
-                                <div class="flex gap-2">
-                                    <Input
-                                        v-model="newOption[field._uid]"
-                                        placeholder="Add option"
-                                        :disabled="readOnly"
-                                        @keydown.enter.prevent="addOption(field)"
-                                    />
+                                            {{ fieldTypeDescriptions[option.value] }}
+                                        </span>
+                                    </span>
+                                </span>
+                                <button
+                                    type="button"
+                                    class="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="readOnly"
+                                    :aria-label="`Add ${option.label}`"
+                                    @click="appendField(option.value)"
+                                >
+                                    <Plus class="size-4" />
+                                </button>
+                            </li>
+                        </template>
+                    </draggable>
+                    <p class="text-xs text-muted-foreground">
+                        Drag elements onto the canvas, or click the
+                        <Plus class="inline size-3 align-text-bottom" />
+                        to append.
+                    </p>
+                </aside>
+
+                <section class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-sm font-semibold uppercase text-muted-foreground">
+                            Form fields
+                        </h2>
+                        <span class="text-xs text-muted-foreground">
+                            {{ builder.schema.fields.length }} field<span
+                                v-if="builder.schema.fields.length !== 1"
+                                >s</span
+                            >
+                        </span>
+                    </div>
+                    <p
+                        v-if="builder.errors.schema"
+                        class="text-sm text-destructive"
+                    >
+                        {{ builder.errors.schema }}
+                    </p>
+
+                    <draggable
+                        v-model="builder.schema.fields"
+                        :group="{ name: 'fields' }"
+                        item-key="_uid"
+                        handle=".drag-handle"
+                        :disabled="readOnly"
+                        :animation="150"
+                        ghost-class="opacity-50"
+                        tag="ul"
+                        class="min-h-[14rem] space-y-4 rounded-lg border-2 border-dashed border-muted-foreground/30 p-4"
+                    >
+                        <template #header>
+                            <li
+                                v-if="builder.schema.fields.length === 0"
+                                class="flex h-32 select-none items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground"
+                            >
+                                Drag a field type from the left or click
+                                <Plus class="mx-1 inline size-3 align-text-bottom" />
+                                to add one.
+                            </li>
+                        </template>
+                        <template #item="{ element: field, index }">
+                            <li
+                                class="space-y-3 rounded-lg border bg-card p-4 shadow-sm"
+                                :data-test="`field-row-${index}`"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            class="drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 active:cursor-grabbing"
+                                            :disabled="readOnly"
+                                            :aria-label="`Drag field ${index + 1}`"
+                                        >
+                                            <GripVertical class="size-4" />
+                                        </button>
+                                        <span class="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <component
+                                                :is="fieldTypeIcons[field.type]"
+                                                class="size-3.5"
+                                            />
+                                            <span>#{{ index + 1 }}</span>
+                                        </span>
+                                    </div>
                                     <Button
                                         type="button"
-                                        variant="secondary"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="text-destructive"
                                         :disabled="readOnly"
-                                        @click="addOption(field)"
+                                        @click="removeField(index)"
                                     >
-                                        Add
+                                        <Trash2 class="size-4" />
                                     </Button>
                                 </div>
-                            </div>
-                        </li>
-                    </template>
-                </draggable>
-            </section>
+
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="grid gap-2">
+                                        <Label :for="`field-key-${field._uid}`">
+                                            Key
+                                        </Label>
+                                        <Input
+                                            :id="`field-key-${field._uid}`"
+                                            v-model="field.key"
+                                            placeholder="first_name"
+                                            :disabled="readOnly"
+                                        />
+                                        <InputError :message="fieldError(index, 'key')" />
+                                    </div>
+                                    <div class="grid gap-2">
+                                        <Label :for="`field-label-${field._uid}`">
+                                            Label
+                                        </Label>
+                                        <Input
+                                            :id="`field-label-${field._uid}`"
+                                            v-model="field.label"
+                                            placeholder="First name"
+                                            :disabled="readOnly"
+                                        />
+                                        <InputError
+                                            :message="fieldError(index, 'label')"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div class="grid gap-2">
+                                        <Label :for="`field-type-${field._uid}`">
+                                            Type
+                                        </Label>
+                                        <select
+                                            :id="`field-type-${field._uid}`"
+                                            v-model="field.type"
+                                            :disabled="readOnly"
+                                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none disabled:opacity-60"
+                                        >
+                                            <option
+                                                v-for="option in fieldTypeOptions"
+                                                :key="option.value"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
+                                            </option>
+                                        </select>
+                                        <InputError
+                                            :message="fieldError(index, 'type')"
+                                        />
+                                    </div>
+                                    <div class="grid gap-2">
+                                        <Label
+                                            :for="`field-placeholder-${field._uid}`"
+                                        >
+                                            Placeholder
+                                        </Label>
+                                        <Input
+                                            :id="`field-placeholder-${field._uid}`"
+                                            v-model="field.placeholder"
+                                            :disabled="readOnly"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        :id="`field-required-${field._uid}`"
+                                        v-model="field.required"
+                                        type="checkbox"
+                                        :disabled="readOnly"
+                                        class="h-4 w-4 rounded border-input"
+                                    />
+                                    <Label
+                                        :for="`field-required-${field._uid}`"
+                                        class="cursor-pointer"
+                                    >
+                                        Required
+                                    </Label>
+                                </div>
+
+                                <div
+                                    v-if="fieldTypeRequiresOptions(field.type)"
+                                    class="space-y-2 rounded-md border border-dashed p-3"
+                                >
+                                    <Label>Options</Label>
+                                    <ul class="space-y-1">
+                                        <li
+                                            v-for="(
+                                                option, optionIndex
+                                            ) in field.options"
+                                            :key="optionIndex"
+                                            class="flex items-center justify-between gap-2 rounded border bg-muted/40 px-3 py-1 text-sm"
+                                        >
+                                            <span>{{ option }}</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                :disabled="readOnly"
+                                                @click="
+                                                    removeOption(field, optionIndex)
+                                                "
+                                            >
+                                                <Trash2 class="size-3" />
+                                            </Button>
+                                        </li>
+                                    </ul>
+                                    <div class="flex gap-2">
+                                        <Input
+                                            v-model="newOption[field._uid]"
+                                            placeholder="Add option"
+                                            :disabled="readOnly"
+                                            @keydown.enter.prevent="addOption(field)"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            :disabled="readOnly"
+                                            @click="addOption(field)"
+                                        >
+                                            Add
+                                        </Button>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </draggable>
+                </section>
+            </div>
 
             <div class="flex justify-end">
                 <Button type="submit" :disabled="builder.processing || readOnly">
