@@ -9,6 +9,13 @@ use Laravel\Fortify\Features;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected function setUpTraits(): array
+    {
+        $this->app['migrator']->path(__DIR__.'/Fixtures/Migrations');
+
+        return parent::setUpTraits();
+    }
+
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void
     {
         if (! Features::enabled($feature)) {

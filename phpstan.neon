@@ -11,3 +11,8 @@ parameters:
         - bootstrap
         - database/factories
         - routes
+
+    ignoreErrors:
+        -
+            message: '#Trait App\\Concerns\\BelongsToOrganization is used zero times#'
+            path: app/Concerns/BelongsToOrganization.php

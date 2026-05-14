@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Tenancy\SwitchOrganizationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -12,6 +13,11 @@ Route::get('/', fn () => Inertia::render('Welcome', [
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('organizations/{organization}/switch', SwitchOrganizationController::class)
+        ->name('organizations.switch');
 });
 
 require __DIR__.'/settings.php';
