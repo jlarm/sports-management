@@ -58,6 +58,11 @@ final readonly class TeamPolicy
         return $this->update($user, $team);
     }
 
+    public function manageCoaches(User $user, Team $team): bool
+    {
+        return $this->update($user, $team);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

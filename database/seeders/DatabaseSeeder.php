@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Enums\BattingHand;
 use App\Enums\OrganizationRole;
+use App\Enums\TeamRole;
 use App\Enums\ThrowingHand;
 use App\Models\Division;
 use App\Models\Invitation;
@@ -15,6 +16,7 @@ use App\Models\Player;
 use App\Models\Season;
 use App\Models\Team;
 use App\Models\TeamPlayer;
+use App\Models\TeamUser;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -172,6 +174,20 @@ final class DatabaseSeeder extends Seeder
                 'jersey_number' => $jersey,
                 'primary_position' => $position,
                 'is_captain' => $captain,
+            ]);
+        }
+
+        $coachAssignments = [
+            ['spring-10u-red', $user, TeamRole::HeadCoach],
+            ['spring-10u-red', $user, TeamRole::TeamAdmin],
+            ['spring-12u-gold', $user, TeamRole::HeadCoach],
+        ];
+
+        foreach ($coachAssignments as [$teamKey, $coach, $role]) {
+            TeamUser::create([
+                'team_id' => $createdTeams[$teamKey]->id,
+                'user_id' => $coach->id,
+                'role' => $role->value,
             ]);
         }
     }

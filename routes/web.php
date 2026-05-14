@@ -10,6 +10,7 @@ use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
 use App\Http\Controllers\Settings\SeasonsController;
+use App\Http\Controllers\Teams\CoachesController;
 use App\Http\Controllers\Teams\RosterController;
 use App\Http\Controllers\Teams\TeamsController;
 use App\Http\Controllers\Tenancy\SwitchOrganizationController;
@@ -61,6 +62,12 @@ Route::middleware(['auth', 'verified', 'tenant'])
             Route::post('/', [RosterController::class, 'store'])->name('store');
             Route::patch('{rosterEntry}', [RosterController::class, 'update'])->name('update');
             Route::delete('{rosterEntry}', [RosterController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('{team}/coaches')->name('coaches.')->group(function () {
+            Route::post('/', [CoachesController::class, 'store'])->name('store');
+            Route::patch('{coach}', [CoachesController::class, 'update'])->name('update');
+            Route::delete('{coach}', [CoachesController::class, 'destroy'])->name('destroy');
         });
     });
 

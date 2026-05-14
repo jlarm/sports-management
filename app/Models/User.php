@@ -44,6 +44,17 @@ final class User extends Authenticatable
     }
 
     /**
+     * @return BelongsToMany<Team, $this, TeamUser, 'pivot'>
+     */
+    public function coachedTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_user')
+            ->using(TeamUser::class)
+            ->withPivot(['id', 'role'])
+            ->withTimestamps();
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

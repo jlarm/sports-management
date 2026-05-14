@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Teams;
 
+use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\Roster\StoreRosterEntryRequest;
 use App\Http\Requests\Teams\Roster\UpdateRosterEntryRequest;
 use App\Models\Player;
 use App\Models\Team;
 use App\Models\TeamPlayer;
+use App\Models\TeamUser;
+use App\Models\User;
+use App\Tenancy\CurrentTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -59,6 +64,44 @@ final class RosterController extends Controller
             ])
             ->all();
 
+        $coaches = TeamUser::query()
+            ->where('team_id', $team->id)
+            ->with('user:id,name,email')
+            ->orderBy('role')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (TeamUser $coach): array => [
+                'id' => $coach->id,
+                'user_id' => $coach->user_id,
+                'role' => $coach->role->value,
+                'role_label' => $coach->role->label(),
+                'user' => $coach->user !== null
+                    ? [
+                        'id' => $coach->user->id,
+                        'name' => $coach->user->name,
+                        'email' => $coach->user->email,
+                    ]
+                    : null,
+            ])
+            ->all();
+
+        $orgId = app(CurrentTenant::class)->id();
+        $availableMembers = User::query()
+            ->whereHas('organizations', fn (Builder $query) => $query->whereKey($orgId))
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $member): array => [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+            ])
+            ->all();
+
+        $roleOptions = array_map(
+            fn (TeamRole $role): array => ['value' => $role->value, 'label' => $role->label()],
+            TeamRole::cases(),
+        );
+
         return Inertia::render('teams/Show', [
             'team' => [
                 'id' => $team->id,
@@ -71,6 +114,9 @@ final class RosterController extends Controller
             ],
             'rosterEntries' => $entries,
             'availablePlayers' => $availablePlayers,
+            'coaches' => $coaches,
+            'availableMembers' => $availableMembers,
+            'teamRoleOptions' => $roleOptions,
         ]);
     }
 

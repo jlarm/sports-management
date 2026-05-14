@@ -64,4 +64,23 @@ final class Team extends Model
     {
         return $this->hasMany(TeamPlayer::class);
     }
+
+    /**
+     * @return BelongsToMany<User, $this, TeamUser, 'pivot'>
+     */
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'team_user')
+            ->using(TeamUser::class)
+            ->withPivot(['id', 'role'])
+            ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<TeamUser, $this>
+     */
+    public function coachingStaff(): HasMany
+    {
+        return $this->hasMany(TeamUser::class);
+    }
 }

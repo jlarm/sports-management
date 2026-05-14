@@ -2,6 +2,7 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/vue3';
 import { Star } from 'lucide-vue-next';
 import { ref } from 'vue';
+import CoachesController from '@/actions/App/Http/Controllers/Teams/CoachesController';
 import RosterController from '@/actions/App/Http/Controllers/Teams/RosterController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -54,10 +55,32 @@ type AvailablePlayer = {
     dob: string;
 };
 
+type CoachUser = {
+    id: number;
+    name: string;
+    email: string;
+};
+
+type CoachEntry = {
+    id: number;
+    user_id: number;
+    role: 'head_coach' | 'assistant_coach' | 'team_admin';
+    role_label: string;
+    user: CoachUser | null;
+};
+
+type RoleOption = {
+    value: string;
+    label: string;
+};
+
 const props = defineProps<{
     team: TeamSummary;
     rosterEntries: RosterEntry[];
     availablePlayers: AvailablePlayer[];
+    coaches: CoachEntry[];
+    availableMembers: CoachUser[];
+    teamRoleOptions: RoleOption[];
 }>();
 
 setLayoutProps({
@@ -71,9 +94,18 @@ const addOpen = ref(false);
 const editing = ref<RosterEntry | null>(null);
 const editOpen = ref(false);
 
+const coachOpen = ref(false);
+const editingCoach = ref<CoachEntry | null>(null);
+const coachEditOpen = ref(false);
+
 function openEdit(entry: RosterEntry) {
     editing.value = entry;
     editOpen.value = true;
+}
+
+function openCoachEdit(coach: CoachEntry) {
+    editingCoach.value = coach;
+    coachEditOpen.value = true;
 }
 </script>
 
@@ -169,6 +201,195 @@ function openEdit(entry: RosterEntry) {
                 </div>
             </li>
         </ul>
+
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-base font-semibold">Coaching staff</h2>
+                <Button
+                    type="button"
+                    :disabled="availableMembers.length === 0"
+                    @click="coachOpen = true"
+                    data-test="add-coach"
+                >
+                    Add coach
+                </Button>
+            </div>
+            <div
+                v-if="coaches.length === 0"
+                class="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground"
+                data-test="coaches-empty"
+            >
+                No coaches assigned yet.
+            </div>
+            <ul v-else class="divide-y rounded-lg border">
+                <li
+                    v-for="coach in coaches"
+                    :key="coach.id"
+                    class="flex items-center justify-between gap-4 p-4"
+                    :data-test="`coach-row-${coach.id}`"
+                >
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">
+                                {{ coach.user?.name ?? '—' }}
+                            </span>
+                            <Badge variant="secondary">{{ coach.role_label }}</Badge>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            {{ coach.user?.email }}
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            @click="openCoachEdit(coach)"
+                        >
+                            Change role
+                        </Button>
+                        <Form
+                            v-bind="
+                                CoachesController.destroy.form([team.id, coach.id])
+                            "
+                            class="inline"
+                            v-slot="{ processing }"
+                        >
+                            <Button
+                                type="submit"
+                                variant="ghost"
+                                class="text-destructive"
+                                :disabled="processing"
+                            >
+                                Remove
+                            </Button>
+                        </Form>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <Dialog v-model:open="coachOpen">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add coach</DialogTitle>
+                    <DialogDescription>
+                        Pick an org member and a team role. Same person can hold
+                        multiple roles (e.g., head coach + team admin).
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form
+                    v-bind="CoachesController.store.form(team.id)"
+                    class="space-y-4"
+                    v-slot="{ errors, processing }"
+                    @success="coachOpen = false"
+                >
+                    <div class="grid gap-2">
+                        <Label for="coach_user">Person</Label>
+                        <select
+                            id="coach_user"
+                            name="user_id"
+                            required
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none"
+                        >
+                            <option
+                                v-for="member in availableMembers"
+                                :key="member.id"
+                                :value="member.id"
+                            >
+                                {{ member.name }} ({{ member.email }})
+                            </option>
+                        </select>
+                        <InputError :message="errors.user_id" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="coach_role">Role</Label>
+                        <select
+                            id="coach_role"
+                            name="role"
+                            required
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none"
+                        >
+                            <option
+                                v-for="option in teamRoleOptions"
+                                :key="option.value"
+                                :value="option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <InputError :message="errors.role" />
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            @click="coachOpen = false"
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" :disabled="processing">Add</Button>
+                    </DialogFooter>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="coachEditOpen">
+            <DialogContent v-if="editingCoach">
+                <DialogHeader>
+                    <DialogTitle>
+                        Change role — {{ editingCoach.user?.name }}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Update this person's role on the team.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form
+                    v-bind="
+                        CoachesController.update.form([team.id, editingCoach.id])
+                    "
+                    class="space-y-4"
+                    v-slot="{ errors, processing }"
+                    @success="coachEditOpen = false"
+                >
+                    <div class="grid gap-2">
+                        <Label for="edit_coach_role">Role</Label>
+                        <select
+                            id="edit_coach_role"
+                            name="role"
+                            required
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none"
+                        >
+                            <option
+                                v-for="option in teamRoleOptions"
+                                :key="option.value"
+                                :value="option.value"
+                                :selected="editingCoach.role === option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <InputError :message="errors.role" />
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            @click="coachEditOpen = false"
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" :disabled="processing">
+                            Save changes
+                        </Button>
+                    </DialogFooter>
+                </Form>
+            </DialogContent>
+        </Dialog>
 
         <Dialog v-model:open="addOpen">
             <DialogContent>
