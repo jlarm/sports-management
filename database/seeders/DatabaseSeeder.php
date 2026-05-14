@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Enums\OrganizationRole;
 use App\Models\Division;
+use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Season;
 use App\Models\User;
@@ -58,5 +59,17 @@ final class DatabaseSeeder extends Seeder
                 'display_order' => $index,
             ]);
         }
+
+        Location::factory()->for($organization)->create([
+            'name' => 'Bond Park Field 1',
+            'address' => '801 High House Rd, Cary, NC 27513',
+            'maps_link' => 'https://maps.google.com/?q=Bond+Park+Cary+NC',
+        ]);
+
+        Location::factory()->for($organization)->create([
+            'name' => 'Mills Park Diamond',
+            'address' => '1029 Mills Park Dr, Cary, NC 27519',
+            'maps_link' => null,
+        ]);
     }
 }

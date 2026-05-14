@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Settings\DivisionsController;
+use App\Http\Controllers\Settings\LocationsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SeasonsController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -47,4 +48,14 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [DivisionsController::class, 'store'])->name('store');
         Route::patch('{division}', [DivisionsController::class, 'update'])->name('update');
         Route::delete('{division}', [DivisionsController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('settings/locations')
+    ->name('locations.')
+    ->group(function () {
+        Route::get('/', [LocationsController::class, 'index'])->name('index');
+        Route::post('/', [LocationsController::class, 'store'])->name('store');
+        Route::patch('{location}', [LocationsController::class, 'update'])->name('update');
+        Route::delete('{location}', [LocationsController::class, 'destroy'])->name('destroy');
     });
