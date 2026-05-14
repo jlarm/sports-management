@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\SeasonsController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,3 +26,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/appearance', fn () => Inertia::render('settings/Appearance'))->name('appearance.edit');
 });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('settings/seasons')
+    ->name('seasons.')
+    ->group(function () {
+        Route::get('/', [SeasonsController::class, 'index'])->name('index');
+        Route::post('/', [SeasonsController::class, 'store'])->name('store');
+        Route::patch('{season}', [SeasonsController::class, 'update'])->name('update');
+        Route::delete('{season}', [SeasonsController::class, 'destroy'])->name('destroy');
+        Route::post('{season}/activate', [SeasonsController::class, 'activate'])->name('activate');
+    });

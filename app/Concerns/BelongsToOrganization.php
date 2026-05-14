@@ -7,6 +7,7 @@ namespace App\Concerns;
 use App\Models\Organization;
 use App\Tenancy\CurrentTenant;
 use App\Tenancy\OrganizationScope;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -20,13 +21,19 @@ trait BelongsToOrganization
     {
         static::addGlobalScope(new OrganizationScope);
 
-        static::creating(function ($model): void {
-            if ($model->organization_id === null) {
-                $model->organization_id = app(CurrentTenant::class)->id();
+        static::creating(function (Model $model): void {
+            if ($model->getAttribute('organization_id') === null) {
+                $model->setAttribute(
+                    'organization_id',
+                    app(CurrentTenant::class)->id(),
+                );
             }
         });
     }
 
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
