@@ -8,9 +8,9 @@ use App\Models\Division;
 use App\Models\User;
 use App\Tenancy\CurrentTenant;
 
-final class DivisionPolicy
+final readonly class DivisionPolicy
 {
-    public function __construct(private readonly CurrentTenant $tenant) {}
+    public function __construct(private CurrentTenant $tenant) {}
 
     public function viewAny(User $user): bool
     {
@@ -54,6 +54,6 @@ final class DivisionPolicy
 
         $role = $user->roleIn($this->tenant->get());
 
-        return $role !== null && $role->canManageOrganization();
+        return $role instanceof \App\Enums\OrganizationRole && $role->canManageOrganization();
     }
 }

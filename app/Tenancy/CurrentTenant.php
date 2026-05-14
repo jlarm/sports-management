@@ -22,12 +22,12 @@ final class CurrentTenant
 
     public function isResolved(): bool
     {
-        return $this->organization !== null;
+        return $this->organization instanceof Organization;
     }
 
     public function get(): Organization
     {
-        if ($this->organization === null) {
+        if (! $this->organization instanceof Organization) {
             throw TenantNotResolvedException::make();
         }
 

@@ -8,9 +8,9 @@ use App\Models\Invitation;
 use App\Models\User;
 use App\Tenancy\CurrentTenant;
 
-final class InvitationPolicy
+final readonly class InvitationPolicy
 {
-    public function __construct(private readonly CurrentTenant $tenant) {}
+    public function __construct(private CurrentTenant $tenant) {}
 
     public function viewAny(User $user): bool
     {
@@ -44,6 +44,6 @@ final class InvitationPolicy
 
         $role = $user->roleIn($this->tenant->get());
 
-        return $role !== null && $role->canManageOrganization();
+        return $role instanceof \App\Enums\OrganizationRole && $role->canManageOrganization();
     }
 }

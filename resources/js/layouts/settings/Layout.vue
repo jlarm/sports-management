@@ -6,11 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
-import { index as divisionsIndex } from '@/routes/divisions';
-import { index as invitationsIndex } from '@/routes/invitations';
-import { index as locationsIndex } from '@/routes/locations';
 import { edit as editProfile } from '@/routes/profile';
-import { index as seasonsIndex } from '@/routes/seasons';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
@@ -22,22 +18,6 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Security',
         href: editSecurity(),
-    },
-    {
-        title: 'Seasons',
-        href: seasonsIndex(),
-    },
-    {
-        title: 'Divisions',
-        href: divisionsIndex(),
-    },
-    {
-        title: 'Locations',
-        href: locationsIndex(),
-    },
-    {
-        title: 'Invitations',
-        href: invitationsIndex(),
     },
     {
         title: 'Appearance',

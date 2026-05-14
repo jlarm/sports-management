@@ -8,9 +8,9 @@ use App\Models\Location;
 use App\Models\User;
 use App\Tenancy\CurrentTenant;
 
-final class LocationPolicy
+final readonly class LocationPolicy
 {
-    public function __construct(private readonly CurrentTenant $tenant) {}
+    public function __construct(private CurrentTenant $tenant) {}
 
     public function viewAny(User $user): bool
     {
@@ -54,6 +54,6 @@ final class LocationPolicy
 
         $role = $user->roleIn($this->tenant->get());
 
-        return $role !== null && $role->canManageOrganization();
+        return $role instanceof \App\Enums\OrganizationRole && $role->canManageOrganization();
     }
 }

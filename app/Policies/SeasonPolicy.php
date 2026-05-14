@@ -8,9 +8,9 @@ use App\Models\Season;
 use App\Models\User;
 use App\Tenancy\CurrentTenant;
 
-final class SeasonPolicy
+final readonly class SeasonPolicy
 {
-    public function __construct(private readonly CurrentTenant $tenant) {}
+    public function __construct(private CurrentTenant $tenant) {}
 
     public function viewAny(User $user): bool
     {
@@ -59,6 +59,6 @@ final class SeasonPolicy
 
         $role = $user->roleIn($this->tenant->get());
 
-        return $role !== null && $role->canManageOrganization();
+        return $role instanceof \App\Enums\OrganizationRole && $role->canManageOrganization();
     }
 }

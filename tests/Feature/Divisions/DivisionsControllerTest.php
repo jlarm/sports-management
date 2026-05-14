@@ -30,7 +30,7 @@ test('index renders the divisions inertia page ordered by display_order then nam
         ->get(route('divisions.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('settings/divisions/Index')
+            ->component('divisions/Index')
             ->has('divisions', 3)
             ->where('divisions.0.name', 'Beta')
             ->where('divisions.1.name', 'Zeta')

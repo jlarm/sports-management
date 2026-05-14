@@ -24,7 +24,7 @@ final class LocationsController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('settings/locations/Index', [
+        return Inertia::render('locations/Index', [
             'locations' => LocationResource::collection($locations)->toArray($request),
         ]);
     }

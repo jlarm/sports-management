@@ -11,9 +11,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-final class SetCurrentTenant
+final readonly class SetCurrentTenant
 {
-    public function __construct(private readonly CurrentTenant $tenant) {}
+    public function __construct(private CurrentTenant $tenant) {}
 
     /**
      * Resolve the current organization from the session and bind it for the
@@ -33,7 +33,7 @@ final class SetCurrentTenant
 
         $organization = $this->resolveOrganization($request, $user);
 
-        if ($organization === null) {
+        if (! $organization instanceof Organization) {
             return $next($request);
         }
 

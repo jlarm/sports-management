@@ -38,7 +38,7 @@ test('index renders the invitations inertia page with the orgs invitations', fun
         ->get(route('invitations.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('settings/invitations/Index')
+            ->component('invitations/Index')
             ->has('invitations', 2)
             ->where('organizationName', $this->org->name)
             ->where('invitations', function ($invitations) use ($admin) {

@@ -30,7 +30,7 @@ test('index renders the locations inertia page ordered by name', function () {
         ->get(route('locations.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('settings/locations/Index')
+            ->component('locations/Index')
             ->has('locations', 3)
             ->where('locations.0.name', 'Alpha Field')
             ->where('locations.1.name', 'Mason Stadium')

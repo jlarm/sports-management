@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { LayoutGrid } from 'lucide-vue-next';
+import {
+    CalendarRange,
+    LayoutGrid,
+    Layers,
+    MapPin,
+    UserPlus,
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -14,6 +20,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as divisionsIndex } from '@/routes/divisions';
+import { index as invitationsIndex } from '@/routes/invitations';
+import { index as locationsIndex } from '@/routes/locations';
+import { index as seasonsIndex } from '@/routes/seasons';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -21,6 +31,29 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+];
+
+const organizationNavItems: NavItem[] = [
+    {
+        title: 'Seasons',
+        href: seasonsIndex(),
+        icon: CalendarRange,
+    },
+    {
+        title: 'Divisions',
+        href: divisionsIndex(),
+        icon: Layers,
+    },
+    {
+        title: 'Locations',
+        href: locationsIndex(),
+        icon: MapPin,
+    },
+    {
+        title: 'Invitations',
+        href: invitationsIndex(),
+        icon: UserPlus,
     },
 ];
 </script>
@@ -44,6 +77,7 @@ const mainNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
+            <NavMain :items="organizationNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

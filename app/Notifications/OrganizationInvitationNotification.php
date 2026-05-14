@@ -40,7 +40,7 @@ final class OrganizationInvitationNotification extends Notification implements S
         $invitedBy = $this->invitation->invitedBy?->name;
         $acceptUrl = route('invitations.show', ['token' => $this->rawToken]);
 
-        $message = (new MailMessage)
+        return (new MailMessage)
             ->subject("You've been invited to join {$organizationName}")
             ->greeting('Hi there,')
             ->line(
@@ -51,7 +51,5 @@ final class OrganizationInvitationNotification extends Notification implements S
             ->action('View invitation', $acceptUrl)
             ->line('This invitation expires on '.$this->invitation->expires_at->toDayDateTimeString().'.')
             ->line('If you weren\'t expecting this, you can ignore this email.');
-
-        return $message;
     }
 }

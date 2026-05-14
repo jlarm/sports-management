@@ -20,7 +20,7 @@ final class DivisionFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'name' => (string) fake()->unique()->numberBetween(6, 18).'U',
+            'name' => fake()->unique()->numberBetween(6, 18).'U',
             'display_order' => 0,
         ];
     }

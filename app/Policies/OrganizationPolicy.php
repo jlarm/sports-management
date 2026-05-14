@@ -10,7 +10,7 @@ use App\Models\User;
 
 final class OrganizationPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return true;
     }
@@ -20,7 +20,7 @@ final class OrganizationPolicy
         return $user->belongsToOrganization($organization);
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return true;
     }
@@ -49,6 +49,6 @@ final class OrganizationPolicy
     {
         $role = $user->roleIn($organization);
 
-        return $role !== null && $role->canManageOrganization();
+        return $role instanceof OrganizationRole && $role->canManageOrganization();
     }
 }

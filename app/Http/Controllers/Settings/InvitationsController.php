@@ -30,7 +30,7 @@ final class InvitationsController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        return Inertia::render('settings/invitations/Index', [
+        return Inertia::render('invitations/Index', [
             'invitations' => InvitationResource::collection($invitations)->toArray($request),
             'organizationName' => $tenant->get()->name,
         ]);

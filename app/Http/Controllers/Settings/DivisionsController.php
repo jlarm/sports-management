@@ -25,7 +25,7 @@ final class DivisionsController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('settings/divisions/Index', [
+        return Inertia::render('divisions/Index', [
             'divisions' => DivisionResource::collection($divisions)->toArray($request),
         ]);
     }

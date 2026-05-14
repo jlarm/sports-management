@@ -62,7 +62,7 @@ function dialogTitle() {
 <template>
     <Head title="Seasons" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 px-4 py-6 md:px-6">
         <div class="flex items-start justify-between gap-4">
             <Heading
                 variant="small"

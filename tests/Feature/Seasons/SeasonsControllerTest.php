@@ -31,7 +31,7 @@ test('index renders the seasons inertia page with the orgs seasons', function ()
         ->get(route('seasons.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('settings/seasons/Index')
+            ->component('seasons/Index')
             ->has('seasons', 2)
         );
 });

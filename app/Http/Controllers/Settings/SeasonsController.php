@@ -26,7 +26,7 @@ final class SeasonsController extends Controller
             ->orderByDesc('start_date')
             ->get();
 
-        return Inertia::render('settings/seasons/Index', [
+        return Inertia::render('seasons/Index', [
             'seasons' => SeasonResource::collection($seasons)->toArray($request),
         ]);
     }
