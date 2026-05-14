@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\BattingHand;
+use App\Enums\FieldType;
+use App\Enums\FormStatus;
 use App\Enums\OrganizationRole;
 use App\Enums\TeamRole;
 use App\Enums\ThrowingHand;
 use App\Models\Division;
+use App\Models\Form;
 use App\Models\Invitation;
 use App\Models\Location;
 use App\Models\Organization;
@@ -190,5 +193,81 @@ final class DatabaseSeeder extends Seeder
                 'role' => $role->value,
             ]);
         }
+
+        Form::factory()->for($organization)->published()->create([
+            'title' => '2026 Spring Registration',
+            'description' => 'Roster and contact info for the Spring 2026 season.',
+            'schema' => [
+                'fields' => [
+                    [
+                        'key' => 'first_name',
+                        'label' => 'First name',
+                        'type' => FieldType::Text->value,
+                        'required' => true,
+                    ],
+                    [
+                        'key' => 'last_name',
+                        'label' => 'Last name',
+                        'type' => FieldType::Text->value,
+                        'required' => true,
+                    ],
+                    [
+                        'key' => 'dob',
+                        'label' => 'Date of birth',
+                        'type' => FieldType::Date->value,
+                        'required' => true,
+                    ],
+                    [
+                        'key' => 'jersey_size',
+                        'label' => 'Jersey size',
+                        'type' => FieldType::Select->value,
+                        'required' => true,
+                        'options' => ['YS', 'YM', 'YL', 'AS', 'AM', 'AL', 'AXL'],
+                    ],
+                    [
+                        'key' => 'allergies',
+                        'label' => 'Allergies or medical notes',
+                        'type' => FieldType::Textarea->value,
+                        'required' => false,
+                    ],
+                    [
+                        'key' => 'parent_email',
+                        'label' => 'Parent / guardian email',
+                        'type' => FieldType::Text->value,
+                        'required' => true,
+                    ],
+                    [
+                        'key' => 'parent_phone',
+                        'label' => 'Parent / guardian phone',
+                        'type' => FieldType::Text->value,
+                        'required' => true,
+                    ],
+                    [
+                        'key' => 'media_release',
+                        'label' => 'I consent to team photos being shared publicly',
+                        'type' => FieldType::Checkbox->value,
+                        'required' => false,
+                    ],
+                ],
+            ],
+            'schema_version' => 1,
+        ]);
+
+        Form::factory()->for($organization)->create([
+            'title' => 'Coach intent — Fall 2026',
+            'description' => 'Quick draft to gauge returning coaches.',
+            'status' => FormStatus::Draft->value,
+            'schema' => [
+                'fields' => [
+                    [
+                        'key' => 'returning',
+                        'label' => 'Do you intend to coach again this fall?',
+                        'type' => FieldType::Select->value,
+                        'required' => true,
+                        'options' => ['Yes', 'Maybe', 'No'],
+                    ],
+                ],
+            ],
+        ]);
     }
 }

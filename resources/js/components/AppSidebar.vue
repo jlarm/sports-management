@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import {
     CalendarRange,
+    FileText,
     LayoutGrid,
     Layers,
     MapPin,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as divisionsIndex } from '@/routes/divisions';
+import { index as formsIndex } from '@/routes/forms';
 import { index as invitationsIndex } from '@/routes/invitations';
 import { index as locationsIndex } from '@/routes/locations';
 import { index as playersIndex } from '@/routes/players';
@@ -63,6 +65,11 @@ const organizationNavItems: NavItem[] = [
         title: 'Locations',
         href: locationsIndex(),
         icon: MapPin,
+    },
+    {
+        title: 'Forms',
+        href: formsIndex(),
+        icon: FileText,
     },
     {
         title: 'Invitations',

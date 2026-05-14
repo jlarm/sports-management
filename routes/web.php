@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Forms\FormsController;
 use App\Http\Controllers\Invitations\AcceptInvitationController;
 use App\Http\Controllers\Invitations\DeclineInvitationController;
 use App\Http\Controllers\Invitations\ShowInvitationController;
@@ -46,6 +47,19 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [PlayersController::class, 'store'])->name('store');
         Route::patch('{player}', [PlayersController::class, 'update'])->name('update');
         Route::delete('{player}', [PlayersController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('forms')
+    ->name('forms.')
+    ->group(function () {
+        Route::get('/', [FormsController::class, 'index'])->name('index');
+        Route::post('/', [FormsController::class, 'store'])->name('store');
+        Route::get('{form}/edit', [FormsController::class, 'edit'])->name('edit');
+        Route::patch('{form}', [FormsController::class, 'update'])->name('update');
+        Route::delete('{form}', [FormsController::class, 'destroy'])->name('destroy');
+        Route::post('{form}/publish', [FormsController::class, 'publish'])->name('publish');
+        Route::post('{form}/close', [FormsController::class, 'close'])->name('close');
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])
