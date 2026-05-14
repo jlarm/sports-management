@@ -10,6 +10,7 @@ use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
 use App\Http\Controllers\Settings\SeasonsController;
+use App\Http\Controllers\Teams\TeamsController;
 use App\Http\Controllers\Tenancy\SwitchOrganizationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -43,6 +44,16 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [PlayersController::class, 'store'])->name('store');
         Route::patch('{player}', [PlayersController::class, 'update'])->name('update');
         Route::delete('{player}', [PlayersController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('teams')
+    ->name('teams.')
+    ->group(function () {
+        Route::get('/', [TeamsController::class, 'index'])->name('index');
+        Route::post('/', [TeamsController::class, 'store'])->name('store');
+        Route::patch('{team}', [TeamsController::class, 'update'])->name('update');
+        Route::delete('{team}', [TeamsController::class, 'destroy'])->name('destroy');
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

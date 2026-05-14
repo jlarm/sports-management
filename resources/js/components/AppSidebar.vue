@@ -5,6 +5,7 @@ import {
     LayoutGrid,
     Layers,
     MapPin,
+    Trophy,
     UserPlus,
     UsersRound,
 } from 'lucide-vue-next';
@@ -26,6 +27,7 @@ import { index as invitationsIndex } from '@/routes/invitations';
 import { index as locationsIndex } from '@/routes/locations';
 import { index as playersIndex } from '@/routes/players';
 import { index as seasonsIndex } from '@/routes/seasons';
+import { index as teamsIndex } from '@/routes/teams';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -41,6 +43,11 @@ const organizationNavItems: NavItem[] = [
         title: 'Players',
         href: playersIndex(),
         icon: UsersRound,
+    },
+    {
+        title: 'Teams',
+        href: teamsIndex(),
+        icon: Trophy,
     },
     {
         title: 'Seasons',

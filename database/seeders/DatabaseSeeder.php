@@ -13,8 +13,10 @@ use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Player;
 use App\Models\Season;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 final class DatabaseSeeder extends Seeder
 {
@@ -39,13 +41,13 @@ final class DatabaseSeeder extends Seeder
             'role' => OrganizationRole::Owner->value,
         ]);
 
-        Season::factory()->for($organization)->active()->registrationOpen()->create([
+        $springSeason = Season::factory()->for($organization)->active()->registrationOpen()->create([
             'name' => 'Spring 2026',
             'start_date' => '2026-03-01',
             'end_date' => '2026-05-31',
         ]);
 
-        Season::factory()->for($organization)->create([
+        $fallSeason = Season::factory()->for($organization)->create([
             'name' => 'Fall 2025',
             'start_date' => '2025-09-01',
             'end_date' => '2025-11-30',
@@ -57,8 +59,9 @@ final class DatabaseSeeder extends Seeder
             'end_date' => '2025-05-31',
         ]);
 
+        $divisions = [];
         foreach (['8U', '10U', '12U', '14U', 'Varsity'] as $index => $name) {
-            Division::factory()->for($organization)->create([
+            $divisions[$name] = Division::factory()->for($organization)->create([
                 'name' => $name,
                 'display_order' => $index,
             ]);
@@ -127,6 +130,25 @@ final class DatabaseSeeder extends Seeder
                 'school' => 'Cary Elementary',
                 'jersey_size' => 'YM',
                 'external_id' => $externalId,
+            ]);
+        }
+
+        $teams = [
+            [$springSeason, '10U', '10U Red'],
+            [$springSeason, '10U', '10U Blue'],
+            [$springSeason, '12U', '12U Gold'],
+            [$springSeason, '14U', '14U Black'],
+            [$springSeason, 'Varsity', 'Varsity'],
+            [$fallSeason, '10U', '10U Red'],
+            [$fallSeason, '12U', '12U Gold'],
+        ];
+
+        foreach ($teams as [$season, $divisionName, $teamName]) {
+            Team::factory()->for($organization)->create([
+                'season_id' => $season->id,
+                'division_id' => $divisions[$divisionName]->id,
+                'name' => $teamName,
+                'slug' => Str::slug($teamName),
             ]);
         }
     }
