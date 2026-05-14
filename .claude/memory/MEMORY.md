@@ -1,0 +1,8 @@
+- [Multi-tenancy & SaaS architecture](architecture-tenancy.md) — organization_id everywhere, BelongsToOrganization trait, global scopes, user-to-org pivot
+- [Global vs seasonal data split](global-vs-seasonal.md) — players/divisions/locations are global; teams/rosters/games are seasonal
+- [Database schema plan](schema-plan.md) — full table-by-table schema for users, orgs, seasons, players, teams, forms, submissions
+- [Season archiving & rollover](season-archiving.md) — logical archiving via season_id, session-based current season, rollover wizard clones teams (not rosters)
+- [Form builder approach](form-builder.md) — JSON schema/data columns, but duplicate searchable fields (DOB, jersey size) onto players table
+- [Players, guardians & registration identity](players-guardians.md) — unclaimed guardians (nullable user_id), guest registration, claim-account-later flow
+- [Payments: subscription vs registration fees](payments.md) — Cashier for orgs paying you; Stripe Connect for parents paying orgs
+- [Development roadmap phases](development-roadmap.md) — build order: SaaS onboarding → org settings → form builder → player pool → team manager
