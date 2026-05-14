@@ -6,6 +6,7 @@ import {
     Layers,
     MapPin,
     UserPlus,
+    UsersRound,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -23,6 +24,7 @@ import { dashboard } from '@/routes';
 import { index as divisionsIndex } from '@/routes/divisions';
 import { index as invitationsIndex } from '@/routes/invitations';
 import { index as locationsIndex } from '@/routes/locations';
+import { index as playersIndex } from '@/routes/players';
 import { index as seasonsIndex } from '@/routes/seasons';
 import type { NavItem } from '@/types';
 
@@ -35,6 +37,11 @@ const mainNavItems: NavItem[] = [
 ];
 
 const organizationNavItems: NavItem[] = [
+    {
+        title: 'Players',
+        href: playersIndex(),
+        icon: UsersRound,
+    },
     {
         title: 'Seasons',
         href: seasonsIndex(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Invitations\AcceptInvitationController;
 use App\Http\Controllers\Invitations\DeclineInvitationController;
 use App\Http\Controllers\Invitations\ShowInvitationController;
+use App\Http\Controllers\Players\PlayersController;
 use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
@@ -33,6 +34,16 @@ Route::middleware('auth')->group(function () {
     Route::post('invitations/{token}/decline', DeclineInvitationController::class)
         ->name('invitations.decline');
 });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('players')
+    ->name('players.')
+    ->group(function () {
+        Route::get('/', [PlayersController::class, 'index'])->name('index');
+        Route::post('/', [PlayersController::class, 'store'])->name('store');
+        Route::patch('{player}', [PlayersController::class, 'update'])->name('update');
+        Route::delete('{player}', [PlayersController::class, 'destroy'])->name('destroy');
+    });
 
 Route::middleware(['auth', 'verified', 'tenant'])
     ->prefix('seasons')
