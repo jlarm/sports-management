@@ -26,10 +26,23 @@ return new class extends Migration
             $table->unique(['organization_id', 'name']);
         });
 
-        DB::statement(
-            'CREATE UNIQUE INDEX seasons_one_active_per_org '
-            .'ON seasons (organization_id) WHERE is_active = 1'
-        );
+        $driver = DB::connection()->getDriverName();
+
+        if (in_array($driver, ['sqlite', 'pgsql'], true)) {
+            // Native partial unique index.
+            DB::statement(
+                'CREATE UNIQUE INDEX seasons_one_active_per_org '
+                .'ON seasons (organization_id) WHERE is_active = 1'
+            );
+        } elseif (in_array($driver, ['mysql', 'mariadb'], true)) {
+            // MySQL 8.0+/MariaDB 10.5+ functional index. The expression evaluates
+            // to organization_id when the row is active and NULL otherwise; the
+            // unique index ignores NULLs, so inactive seasons never collide.
+            DB::statement(
+                'CREATE UNIQUE INDEX seasons_one_active_per_org '
+                .'ON seasons ((CASE WHEN is_active = 1 THEN organization_id END))'
+            );
+        }
     }
 
     public function down(): void
