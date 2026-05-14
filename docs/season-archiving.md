@@ -1,5 +1,12 @@
 # Season Archiving
 
+> **Stack note (read first):** This project is **Inertia v3 + Vue 3 + Fortify +
+> Wayfinder.** **No Livewire.** This doc was drafted before that decision and
+> still uses "Livewire component" phrasing — those references have been rewritten
+> below as Inertia pages. If anything was missed, ignore the Livewire framing.
+> See [`decisions.md`](./decisions.md), §9 for the corrected rollover flow that
+> supersedes the pseudocode here.
+
 In a modern SaaS application, "Archiving" rarely means moving data to a separate "cold storage" database. Instead, it means **scoping your queries**.
 
 You never want to delete the 2024 season data. You just want to **hide** it from the default view when the 2025 season starts.
@@ -54,7 +61,7 @@ When a user logs in, you shouldn't just check what their Org is; you should chec
 3. **The Switch:** If they select "Fall 2024" from the dropdown, update the Session variable and refresh the page.
 
 **The Global Scope (or Trait):**
-Now, in your Livewire components, you don't need to manually filter every query.
+Now, in your Inertia controllers and Vue pages, you don't need to manually filter every query.
 
 PHP
 
@@ -76,7 +83,7 @@ _Result:_ When you run `Team::all()`, Laravel automatically adds `WHERE season_i
 
 When an Org starts a new season, they don't want to re-type 20 team names. You need a **Clone/Import Utility**.
 
-Create a Livewire component called `SeasonRollover`.
+Create an Inertia page called `seasons/Rollover` backed by a `SeasonRolloverController`.
 
 **The Workflow:**
 
@@ -145,4 +152,4 @@ This is the biggest mistake devs make in sports apps.
 2. **Model:** Create the `Season` model with an `is_active` boolean.
 3. **Middleware/Service:** Create the logic to store `current_season_id` in the session.
 4. **UI:** Build the Dropdown in the Navbar to switch seasons.
-5. **Livewire:** Build the "Rollover Wizard" to clone teams to the new season ID
+5. **Inertia/Vue:** Build the "Rollover Wizard" Inertia page to clone teams to the new season ID. See `decisions.md` §9 for the corrected flow.

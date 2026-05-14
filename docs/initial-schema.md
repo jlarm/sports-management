@@ -1,5 +1,10 @@
 # Initial Schema
 
+> **Stack note:** This project is **Inertia v3 + Vue 3 + Fortify + Wayfinder.** **No
+> Livewire.** The binding architectural decisions (constraints, indexes, tenancy,
+> form versioning, payment ledger, COPPA) live in [`decisions.md`](./decisions.md);
+> follow that doc when it disagrees with anything here.
+
 # Database Schema Plan - Travel Baseball SaaS
 
 ### How to use this Schema

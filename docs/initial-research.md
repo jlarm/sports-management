@@ -1,5 +1,10 @@
 # Initial Research
 
+> **Stack note:** This project is **Inertia v3 + Vue 3 + Fortify + Wayfinder.** **No
+> Livewire.** Treat any UI-implementation suggestion as advisory only — the binding
+> rules live in [`decisions.md`](./decisions.md), which supersedes this doc when
+> they disagree.
+
 Here is a checklist of the specific constraints, columns, and relationships you need to account for to avoid painting yourself into a corner later.
 
 1. The SaaS & Tenancy Layer

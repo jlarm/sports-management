@@ -1,5 +1,19 @@
 # Decisions
 
+> ## ⚠️ STACK: Inertia v3 + Vue 3 + Fortify + Wayfinder. **No Livewire.**
+>
+> This is the highest-priority decision in this doc. The older planning docs
+> (`potential-planning-phases.md`, `season-archiving.md`) were drafted assuming a
+> Livewire UI. **Ignore every Livewire reference in those docs.** Build all UI as
+> Inertia pages in `resources/js/pages/...` with Vue 3 components, `useForm` /
+> `<Form>` for form state, and Wayfinder-generated typed routes from `@/actions/`
+> and `@/routes/`. Do not install `livewire/livewire`. Do not create Blade
+> components for application UI. If a planning doc says "Livewire component X,"
+> read it as "Inertia page X."
+>
+> Authentication is handled by Fortify (already installed) — do not introduce
+> Jetstream or Breeze-Livewire flows. See §1 below for the full translation.
+
 This doc captures the non-functional and architectural decisions that the other planning
 docs (`initial-research.md`, `initial-schema.md`, `potential-planning-phases.md`,
 `season-archiving.md`) don't yet cover or get wrong for this repo's stack.

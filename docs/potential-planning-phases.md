@@ -1,5 +1,12 @@
 # Potential Planning Phases
 
+> **Stack note (read first):** This project is **Inertia v3 + Vue 3 + Fortify +
+> Wayfinder.** **No Livewire.** This doc was drafted before that decision and
+> still uses Livewire vocabulary in places — those references have been rewritten
+> below, but if anything was missed, ignore the Livewire framing and read it as
+> "Inertia page + Vue component + Wayfinder route." The authoritative
+> architectural decisions are in [`decisions.md`](./decisions.md).
+
 ### Phase 1: Architecture & Tenancy Strategy
 
 Before writing code, you must decide how to separate the baseball organizations.
@@ -66,12 +73,12 @@ Build the CRUD for the setup data. An Org admin needs to set these up before the
 *   Create Divisions (Age groups).
 *   Invite Assistant Admins.
 
-### Step 3: The Form Builder (The Livewire Logic)
+### Step 3: The Form Builder (Inertia + Vue)
 
 This is the "Form Creator" we discussed.
 
-1. **Builder UI:** Admin drags/drops fields to create a "Registration Questionnaire."
-2. **Public View:** Create a public-facing Livewire component (e.g., `app.com/org/cary-trojans/register`) where parents fill this out.
+1. **Builder UI:** Admin drags/drops fields to create a "Registration Questionnaire." Build it as an Inertia page (`resources/js/pages/forms/Builder.vue`) with `useForm` for state.
+2. **Public View:** Create a public-facing Inertia page (e.g., `app.com/org/cary-trojans/register`) backed by a controller action and an `<Form>` component — no Livewire.
 3. **Payment:** Integrate Stripe _again_ here. The Org pays _you_ (Subscription), but the Parents pay the _Org_ (Registration Fees). You will likely need **Stripe Connect** for this so the money goes to the Org, not you.
 
 ### Step 4: Player Management (The Data Pool)
@@ -88,7 +95,7 @@ This is where your app provides value.
 
 1. **Team Creation:** Admin creates "12U Red".
 2. **Rostering:** A Dual-Listbox UI (Left side: Unassigned Players, Right side: Team Roster).
-    *   _Livewire Feature:_ Select 5 players on the left, click "Move >", update the database.
+    *   _Inertia/Vue:_ Select 5 players on the left, click "Move >"; the Vue component posts via a Wayfinder-generated action to a controller that updates the roster.
 3. **Exporting:** Generate PDF rosters or CSV exports for tournaments.
 * * *
 
@@ -116,8 +123,8 @@ Use Laravel Cashier.
 
 ### Summary Checklist for You
 
-- [ ] **Install:** Laravel, Livewire, Tailwind, Laravel Cashier.
+- [ ] **Install:** Laravel, Inertia v3, Vue 3, Fortify, Wayfinder, Tailwind, Laravel Cashier. (Most already in place — verify, do **not** add Livewire.)
 - [ ] **Models:** Create `Organization`, `Team`, `Player` with the `organization_id` column.
 - [ ] **Stripe:** Set up your Product in Stripe Dashboard (e.g., "Monthly Subscription - $49").
-- [ ] **Livewire Component 1:** `OrgSignup` (Input Org Name -> Stripe Checkout).
-- [ ] **Livewire Component 2:** `FormBuilder` (The JSON schema creator).
+- [ ] **Inertia page 1:** `auth/OrgSignup` (Input Org Name → Stripe Checkout).
+- [ ] **Inertia page 2:** `forms/Builder` (The JSON schema creator).
