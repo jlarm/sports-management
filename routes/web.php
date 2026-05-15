@@ -9,6 +9,7 @@ use App\Http\Controllers\Invitations\AcceptInvitationController;
 use App\Http\Controllers\Invitations\DeclineInvitationController;
 use App\Http\Controllers\Invitations\ShowInvitationController;
 use App\Http\Controllers\Players\PlayersController;
+use App\Http\Controllers\Seasons\SeasonRolloverController;
 use App\Http\Controllers\Settings\DivisionsController;
 use App\Http\Controllers\Settings\InvitationsController;
 use App\Http\Controllers\Settings\LocationsController;
@@ -116,6 +117,8 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::patch('{season}', [SeasonsController::class, 'update'])->name('update');
         Route::delete('{season}', [SeasonsController::class, 'destroy'])->name('destroy');
         Route::post('{season}/activate', [SeasonsController::class, 'activate'])->name('activate');
+        Route::get('{season}/rollover', [SeasonRolloverController::class, 'show'])->name('rollover.show');
+        Route::post('{season}/rollover', [SeasonRolloverController::class, 'store'])->name('rollover.store');
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

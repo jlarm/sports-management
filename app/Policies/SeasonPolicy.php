@@ -51,6 +51,11 @@ final readonly class SeasonPolicy
         return $this->update($user, $season);
     }
 
+    public function rollover(User $user, Season $season): bool
+    {
+        return $this->update($user, $season);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

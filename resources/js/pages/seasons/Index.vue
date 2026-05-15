@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { index as seasonsIndex } from '@/routes/seasons';
+import { show as rolloverShow } from '@/routes/seasons/rollover';
 
 type Season = {
     id: number;
@@ -122,6 +123,9 @@ function dialogTitle() {
                             Activate
                         </Button>
                     </Form>
+                    <Button as-child variant="ghost" :data-test="`season-rollover-${season.id}`">
+                        <Link :href="rolloverShow(season.id)">Roll over</Link>
+                    </Button>
                     <Button
                         type="button"
                         variant="ghost"
