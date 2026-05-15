@@ -6,15 +6,22 @@ namespace App\Http\Controllers\Forms;
 
 use App\Enums\ConsentType;
 use App\Enums\FieldType;
+use App\Enums\OrganizationRole;
 use App\Http\Controllers\Controller;
 use App\Models\Consent;
 use App\Models\Form;
+use App\Models\Organization;
 use App\Models\Submission;
+use App\Models\User;
+use App\Notifications\SubmissionConfirmationToSubmitter;
+use App\Notifications\SubmissionReceivedAdminAlert;
 use App\Services\Audit\AuditLogger;
 use App\Services\Consents\ConsentTextRegistry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,9 +53,10 @@ final class PublicFormController extends Controller
         $request->validate($this->rulesFor($resolved));
 
         $payload = $request->input('data');
+        /** @var array<string, mixed> $data */
         $data = is_array($payload) ? $payload : [];
 
-        DB::transaction(function () use ($resolved, $data, $request, $audit): void {
+        $submission = DB::transaction(function () use ($resolved, $data, $request, $audit): Submission {
             $submission = Submission::create([
                 'organization_id' => $resolved->organization_id,
                 'form_id' => $resolved->id,
@@ -80,7 +88,11 @@ final class PublicFormController extends Controller
                     payload: ['consent_type' => $type->value, 'submission_id' => $submission->id],
                 );
             }
+
+            return $submission;
         });
+
+        $this->dispatchNotifications($resolved, $submission, $data, $request->user());
 
         return to_route('public-forms.thanks', ['form' => $resolved->id]);
     }
@@ -95,6 +107,38 @@ final class PublicFormController extends Controller
                 'title' => $resolved->title,
             ],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function dispatchNotifications(Form $form, Submission $submission, array $data, ?User $authedUser): void
+    {
+        $organization = Organization::query()->findOrFail($form->organization_id);
+
+        $admins = User::query()
+            ->whereHas('organizations', function (Builder $q) use ($organization): void {
+                $q->where('organization_id', $organization->id)
+                    ->whereIn('role', [
+                        OrganizationRole::Owner->value,
+                        OrganizationRole::Admin->value,
+                    ]);
+            })
+            ->get();
+
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new SubmissionReceivedAdminAlert($submission, $form));
+        }
+
+        $parentEmail = $data['parent_email'] ?? null;
+        $submitterEmail = is_string($parentEmail) && $parentEmail !== ''
+            ? $parentEmail
+            : $authedUser?->email;
+
+        if (is_string($submitterEmail) && $submitterEmail !== '') {
+            Notification::route('mail', $submitterEmail)
+                ->notify(new SubmissionConfirmationToSubmitter($submission, $form, $organization));
+        }
     }
 
     private function loadPublishedForm(int $id): Form

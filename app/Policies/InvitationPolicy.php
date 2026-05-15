@@ -36,6 +36,11 @@ final readonly class InvitationPolicy
             && $this->canManageCurrentOrg($user);
     }
 
+    public function resend(User $user, Invitation $invitation): bool
+    {
+        return $this->delete($user, $invitation);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

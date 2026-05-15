@@ -111,21 +111,36 @@ function statusLabel(status: Invitation['status']) {
                         >
                     </p>
                 </div>
-                <Form
-                    v-if="invitation.status === 'pending'"
-                    v-bind="InvitationsController.destroy.form(invitation.id)"
-                    class="inline"
-                    v-slot="{ processing }"
-                >
-                    <Button
-                        type="submit"
-                        variant="ghost"
-                        class="text-destructive"
-                        :disabled="processing"
+                <div v-if="invitation.status === 'pending'" class="flex items-center gap-2">
+                    <Form
+                        v-bind="InvitationsController.resend.form(invitation.id)"
+                        class="inline"
+                        v-slot="{ processing }"
                     >
-                        Revoke
-                    </Button>
-                </Form>
+                        <Button
+                            type="submit"
+                            variant="ghost"
+                            :disabled="processing"
+                            :data-test="`invitation-resend-${invitation.id}`"
+                        >
+                            Resend
+                        </Button>
+                    </Form>
+                    <Form
+                        v-bind="InvitationsController.destroy.form(invitation.id)"
+                        class="inline"
+                        v-slot="{ processing }"
+                    >
+                        <Button
+                            type="submit"
+                            variant="ghost"
+                            class="text-destructive"
+                            :disabled="processing"
+                        >
+                            Revoke
+                        </Button>
+                    </Form>
+                </div>
             </li>
         </ul>
 

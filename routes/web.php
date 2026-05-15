@@ -148,6 +148,7 @@ Route::middleware(['auth', 'verified', 'tenant'])
     ->group(function () {
         Route::get('/', [InvitationsController::class, 'index'])->name('index');
         Route::post('/', [InvitationsController::class, 'store'])->name('store');
+        Route::post('{invitation}/resend', [InvitationsController::class, 'resend'])->name('resend');
         Route::delete('{invitation}', [InvitationsController::class, 'destroy'])->name('destroy');
     });
 

@@ -9,6 +9,7 @@ use App\Http\Requests\Invitations\StoreInvitationRequest;
 use App\Http\Resources\InvitationResource;
 use App\Models\Invitation;
 use App\Notifications\OrganizationInvitationNotification;
+use App\Services\Audit\AuditLogger;
 use App\Tenancy\CurrentTenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,6 +75,35 @@ final class InvitationsController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation revoked.')]);
+
+        return to_route('invitations.index');
+    }
+
+    public function resend(Invitation $invitation, AuditLogger $audit): RedirectResponse
+    {
+        $this->authorize('resend', $invitation);
+
+        abort_unless($invitation->isPending(), 422, 'Only pending invitations can be re-sent.');
+
+        $token = Invitation::mintToken();
+        $invitation->forceFill([
+            'token_hash' => $token['hash'],
+            'expires_at' => now()->addDays(7),
+        ])->save();
+
+        $invitation->load('organization', 'invitedBy');
+
+        Notification::route('mail', $invitation->email)
+            ->notify(new OrganizationInvitationNotification($invitation, $token['raw']));
+
+        $audit->log(
+            organizationId: $invitation->organization_id,
+            action: 'invitation.resent',
+            subject: $invitation,
+            payload: ['email' => $invitation->email, 'role' => $invitation->role->value],
+        );
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation re-sent.')]);
 
         return to_route('invitations.index');
     }
