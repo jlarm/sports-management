@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\SubmissionStatus;
 use App\Models\Form;
 use App\Models\Organization;
 use App\Models\Submission;
@@ -29,7 +30,23 @@ final class SubmissionFactory extends Factory
             'schema_snapshot' => $form->schema,
             'schema_version' => $form->schema_version,
             'data' => ['first_name' => 'Anonymous', 'last_name' => 'Submitter'],
+            'status' => SubmissionStatus::Pending,
             'submitted_at' => now(),
         ];
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn (): array => ['status' => SubmissionStatus::Pending]);
+    }
+
+    public function processed(): static
+    {
+        return $this->state(fn (): array => ['status' => SubmissionStatus::Processed]);
+    }
+
+    public function skipped(): static
+    {
+        return $this->state(fn (): array => ['status' => SubmissionStatus::Skipped]);
     }
 }

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\BelongsToOrganization;
+use App\Enums\SubmissionStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\SubmissionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array{fields: array<int, array<string, mixed>>} $schema_snapshot
  * @property int $schema_version
  * @property array<string, mixed> $data
+ * @property SubmissionStatus $status
  * @property CarbonImmutable $submitted_at
  */
 #[Fillable([
@@ -29,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'schema_snapshot',
     'schema_version',
     'data',
+    'status',
     'submitted_at',
 ])]
 final class Submission extends Model
@@ -55,6 +59,14 @@ final class Submission extends Model
     }
 
     /**
+     * @return HasMany<SubmissionDecision, $this>
+     */
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(SubmissionDecision::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -63,6 +75,7 @@ final class Submission extends Model
             'schema_snapshot' => 'array',
             'schema_version' => 'integer',
             'data' => 'array',
+            'status' => SubmissionStatus::class,
             'submitted_at' => 'immutable_datetime',
         ];
     }

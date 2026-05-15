@@ -77,6 +77,8 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::prefix('{form}/submissions')->name('submissions.')->group(function () {
             Route::get('/', [SubmissionsController::class, 'index'])->name('index');
             Route::get('{submission}', [SubmissionsController::class, 'show'])->name('show');
+            Route::get('{submission}/review', [SubmissionsController::class, 'review'])->name('review');
+            Route::post('{submission}/process', [SubmissionsController::class, 'process'])->name('process');
         });
     });
 

@@ -64,6 +64,17 @@ final class Player extends Model
     }
 
     /**
+     * @return BelongsToMany<Guardian, $this, PlayerGuardian, 'pivot'>
+     */
+    public function guardians(): BelongsToMany
+    {
+        return $this->belongsToMany(Guardian::class, 'player_guardian')
+            ->using(PlayerGuardian::class)
+            ->withPivot(['id', 'relationship', 'is_primary'])
+            ->withTimestamps();
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

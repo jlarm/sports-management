@@ -5,12 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
 import { index as formsIndex } from '@/routes/forms';
-import { show as submissionShow, index as submissionsIndex } from '@/routes/forms/submissions';
+import { review as submissionReview, show as submissionShow, index as submissionsIndex } from '@/routes/forms/submissions';
 
 type SubmissionRow = {
     id: number;
     submitted_at: string;
     schema_version: number;
+    status: 'pending' | 'processed' | 'skipped';
+    status_label: string;
     submitted_by: { name: string; email: string } | null;
 };
 
@@ -78,6 +80,12 @@ setLayoutProps({
                         <Badge v-else variant="secondary">
                             v{{ submission.schema_version }}
                         </Badge>
+                        <Badge
+                            :variant="submission.status === 'pending' ? 'default' : 'outline'"
+                            :data-test="`submission-status-${submission.id}`"
+                        >
+                            {{ submission.status_label }}
+                        </Badge>
                     </div>
                     <p class="text-xs text-muted-foreground">
                         {{ formatDateTime(submission.submitted_at) }}
@@ -88,9 +96,19 @@ setLayoutProps({
                         <span v-else> · anonymous</span>
                     </p>
                 </div>
-                <Button as-child variant="ghost">
-                    <Link :href="submissionShow([form.id, submission.id])">View</Link>
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button
+                        v-if="submission.status === 'pending'"
+                        as-child
+                        variant="default"
+                        :data-test="`submission-review-${submission.id}`"
+                    >
+                        <Link :href="submissionReview([form.id, submission.id])">Review</Link>
+                    </Button>
+                    <Button as-child variant="ghost">
+                        <Link :href="submissionShow([form.id, submission.id])">View</Link>
+                    </Button>
+                </div>
             </li>
         </ul>
     </div>

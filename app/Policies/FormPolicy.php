@@ -65,6 +65,11 @@ final readonly class FormPolicy
             && $this->canManageCurrentOrg($user);
     }
 
+    public function processSubmissions(User $user, Form $form): bool
+    {
+        return $this->viewSubmissions($user, $form);
+    }
+
     private function canManageCurrentOrg(User $user): bool
     {
         if (! $this->tenant->isResolved()) {

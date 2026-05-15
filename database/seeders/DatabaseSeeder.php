@@ -7,17 +7,21 @@ namespace Database\Seeders;
 use App\Enums\BattingHand;
 use App\Enums\FieldType;
 use App\Enums\FormStatus;
+use App\Enums\MatchAction;
 use App\Enums\OrganizationRole;
+use App\Enums\SubmissionStatus;
 use App\Enums\TeamRole;
 use App\Enums\ThrowingHand;
 use App\Models\Division;
 use App\Models\Form;
+use App\Models\Guardian;
 use App\Models\Invitation;
 use App\Models\Location;
 use App\Models\Organization;
 use App\Models\Player;
 use App\Models\Season;
 use App\Models\Submission;
+use App\Models\SubmissionDecision;
 use App\Models\Team;
 use App\Models\TeamPlayer;
 use App\Models\TeamUser;
@@ -279,6 +283,8 @@ final class DatabaseSeeder extends Seeder
                 'dob' => '2014-07-19',
                 'jersey_size' => 'YM',
                 'allergies' => '',
+                'parent_first_name' => 'Robert',
+                'parent_last_name' => 'Carter',
                 'parent_email' => 'rcarter@example.com',
                 'parent_phone' => '919-555-0102',
                 'media_release' => '1',
@@ -289,6 +295,8 @@ final class DatabaseSeeder extends Seeder
                 'dob' => '2013-10-04',
                 'jersey_size' => 'YL',
                 'allergies' => 'Peanut allergy — carries an EpiPen.',
+                'parent_first_name' => 'Jenna',
+                'parent_last_name' => 'Murphy',
                 'parent_email' => 'jmurphy@example.com',
                 'parent_phone' => '919-555-0144',
                 'media_release' => '1',
@@ -299,14 +307,17 @@ final class DatabaseSeeder extends Seeder
                 'dob' => '2015-03-29',
                 'jersey_size' => 'YS',
                 'allergies' => '',
+                'parent_first_name' => 'Kim',
+                'parent_last_name' => 'Bell',
                 'parent_email' => 'kbell@example.com',
                 'parent_phone' => '919-555-0167',
                 'media_release' => '',
             ],
         ];
 
+        $createdSubmissions = [];
         foreach ($submissions as $data) {
-            Submission::factory()->for($organization)->for($springFormFresh)->create([
+            $createdSubmissions[] = Submission::factory()->for($organization)->for($springFormFresh)->create([
                 'submitted_by_user_id' => null,
                 'schema_snapshot' => $springFormFresh->schema,
                 'schema_version' => $springFormFresh->schema_version,
@@ -314,5 +325,33 @@ final class DatabaseSeeder extends Seeder
                 'submitted_at' => now()->subDays(random_int(1, 14)),
             ]);
         }
+
+        $murphySubmission = $createdSubmissions[1];
+        $murphyPlayer = Player::factory()->for($organization)->create([
+            'first_name' => 'Sofia',
+            'last_name' => 'Murphy',
+            'dob' => '2013-10-04',
+            'jersey_size' => 'YL',
+            'medical_notes' => 'Peanut allergy — carries an EpiPen.',
+        ]);
+        $murphyGuardian = Guardian::factory()->for($organization)->create([
+            'first_name' => 'Jenna',
+            'last_name' => 'Murphy',
+            'email' => 'jmurphy@example.com',
+            'phone' => '919-555-0144',
+        ]);
+        $murphyPlayer->guardians()->attach($murphyGuardian->id, ['is_primary' => true]);
+        $murphySubmission->forceFill(['status' => SubmissionStatus::Processed])->save();
+        SubmissionDecision::query()->create([
+            'organization_id' => $organization->id,
+            'submission_id' => $murphySubmission->id,
+            'decided_by_user_id' => $user->id,
+            'player_action' => MatchAction::Created,
+            'player_id' => $murphyPlayer->id,
+            'guardian_action' => MatchAction::Created,
+            'guardian_id' => $murphyGuardian->id,
+            'notes' => 'Seeded as a worked example of the dedupe flow.',
+            'decided_at' => now()->subDays(1),
+        ]);
     }
 }

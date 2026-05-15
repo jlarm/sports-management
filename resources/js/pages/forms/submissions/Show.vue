@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
 import { index as formsIndex } from '@/routes/forms';
-import { index as submissionsIndex, show as submissionShow } from '@/routes/forms/submissions';
+import { review as submissionReview, index as submissionsIndex, show as submissionShow } from '@/routes/forms/submissions';
 
 type FieldShape = {
     key: string;
@@ -15,14 +15,30 @@ type FieldShape = {
     options?: string[];
 };
 
+type DecisionRow = {
+    id: number;
+    decided_at: string;
+    player_action: string;
+    player_action_label: string;
+    player: { id: number; first_name: string; last_name: string } | null;
+    guardian_action: string;
+    guardian_action_label: string;
+    guardian: { id: number; first_name: string; last_name: string; email: string } | null;
+    notes: string | null;
+    decided_by: { name: string } | null;
+};
+
 type SubmissionPayload = {
     id: number;
     submitted_at: string;
     schema_version: number;
     is_outdated: boolean;
+    status: 'pending' | 'processed' | 'skipped';
+    status_label: string;
     schema_snapshot: { fields: FieldShape[] };
     data: Record<string, unknown>;
     submitted_by: { name: string; email: string } | null;
+    decisions: DecisionRow[];
 };
 
 type FormPayload = {
@@ -66,12 +82,25 @@ function displayValue(value: unknown): string {
                 :title="`Submission #${submission.id}`"
                 :description="`${form.title} · submitted ${formatDateTime(submission.submitted_at)}`"
             />
-            <Button as-child variant="ghost">
-                <Link :href="submissionsIndex(form.id)">Back to submissions</Link>
-            </Button>
+            <div class="flex items-center gap-2">
+                <Button
+                    v-if="submission.status === 'pending'"
+                    as-child
+                    variant="default"
+                    data-test="submission-review-button"
+                >
+                    <Link :href="submissionReview([form.id, submission.id])">Review</Link>
+                </Button>
+                <Button as-child variant="ghost">
+                    <Link :href="submissionsIndex(form.id)">Back to submissions</Link>
+                </Button>
+            </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Badge :variant="submission.status === 'pending' ? 'default' : 'outline'" data-test="submission-status-badge">
+                {{ submission.status_label }}
+            </Badge>
             <Badge :variant="submission.is_outdated ? 'outline' : 'secondary'">
                 v{{ submission.schema_version }}
             </Badge>
@@ -104,5 +133,39 @@ function displayValue(value: unknown): string {
                 </dd>
             </div>
         </dl>
+
+        <div v-if="submission.decisions.length > 0" class="space-y-3">
+            <h3 class="text-sm font-semibold">Processing history</h3>
+            <ul class="divide-y rounded-lg border" data-test="submission-decisions">
+                <li
+                    v-for="decision in submission.decisions"
+                    :key="decision.id"
+                    class="space-y-2 p-4 text-sm"
+                >
+                    <p class="text-xs text-muted-foreground">
+                        {{ formatDateTime(decision.decided_at) }}
+                        <span v-if="decision.decided_by"> · by {{ decision.decided_by.name }}</span>
+                    </p>
+                    <p>
+                        <span class="font-medium">Player:</span>
+                        {{ decision.player_action_label }}
+                        <span v-if="decision.player">
+                            — {{ decision.player.first_name }} {{ decision.player.last_name }}
+                        </span>
+                    </p>
+                    <p>
+                        <span class="font-medium">Guardian:</span>
+                        {{ decision.guardian_action_label }}
+                        <span v-if="decision.guardian">
+                            — {{ decision.guardian.first_name }} {{ decision.guardian.last_name }}
+                            ({{ decision.guardian.email }})
+                        </span>
+                    </p>
+                    <p v-if="decision.notes" class="text-muted-foreground">
+                        {{ decision.notes }}
+                    </p>
+                </li>
+            </ul>
+        </div>
     </div>
 </template>
