@@ -6,6 +6,7 @@ import {
     LayoutGrid,
     Layers,
     MapPin,
+    ShieldCheck,
     Trophy,
     UserPlus,
     UsersRound,
@@ -23,6 +24,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as backgroundChecksIndex } from '@/routes/background-checks';
 import { index as divisionsIndex } from '@/routes/divisions';
 import { index as formsIndex } from '@/routes/forms';
 import { index as invitationsIndex } from '@/routes/invitations';
@@ -75,6 +77,11 @@ const organizationNavItems: NavItem[] = [
         title: 'Invitations',
         href: invitationsIndex(),
         icon: UserPlus,
+    },
+    {
+        title: 'Background checks',
+        href: backgroundChecksIndex(),
+        icon: ShieldCheck,
     },
 ];
 </script>

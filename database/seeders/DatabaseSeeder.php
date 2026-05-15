@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\BackgroundCheckStatus;
 use App\Enums\BattingHand;
 use App\Enums\ConsentType;
 use App\Enums\FieldType;
@@ -13,6 +14,7 @@ use App\Enums\OrganizationRole;
 use App\Enums\SubmissionStatus;
 use App\Enums\TeamRole;
 use App\Enums\ThrowingHand;
+use App\Models\BackgroundCheck;
 use App\Models\Consent;
 use App\Models\Division;
 use App\Models\Form;
@@ -186,6 +188,15 @@ final class DatabaseSeeder extends Seeder
                 'is_captain' => $captain,
             ]);
         }
+
+        BackgroundCheck::query()->create([
+            'organization_id' => $organization->id,
+            'user_id' => $user->id,
+            'provider' => 'NCSI',
+            'status' => BackgroundCheckStatus::Cleared->value,
+            'cleared_through' => now()->addYear()->toDateString(),
+            'notes' => null,
+        ]);
 
         $coachAssignments = [
             ['spring-10u-red', $user, TeamRole::HeadCoach],

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\BackgroundChecks\BackgroundChecksController;
 use App\Http\Controllers\Forms\FormsController;
 use App\Http\Controllers\Forms\PublicFormController;
 use App\Http\Controllers\Forms\SubmissionsController;
@@ -148,6 +149,16 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::get('/', [InvitationsController::class, 'index'])->name('index');
         Route::post('/', [InvitationsController::class, 'store'])->name('store');
         Route::delete('{invitation}', [InvitationsController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('background-checks')
+    ->name('background-checks.')
+    ->group(function () {
+        Route::get('/', [BackgroundChecksController::class, 'index'])->name('index');
+        Route::post('/', [BackgroundChecksController::class, 'store'])->name('store');
+        Route::patch('{background_check}', [BackgroundChecksController::class, 'update'])->name('update');
+        Route::delete('{background_check}', [BackgroundChecksController::class, 'destroy'])->name('destroy');
     });
 
 require __DIR__.'/settings.php';

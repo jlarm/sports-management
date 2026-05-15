@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\OrganizationRole;
 use App\Enums\TeamRole;
+use App\Models\BackgroundCheck;
 use App\Models\Division;
 use App\Models\Organization;
 use App\Models\Season;
@@ -61,6 +62,7 @@ test('admin can assign a coach role', function () {
     $admin = coachAdminLogin($this->org);
     $coach = User::factory()->create();
     $coach->organizations()->attach($this->org, ['role' => OrganizationRole::Coach->value]);
+    BackgroundCheck::factory()->for($this->org)->for($coach)->cleared()->create();
 
     $this->actingAs($admin)
         ->withSession(['current_org_id' => $this->org->id])
@@ -129,6 +131,7 @@ test('admin can change a coach role', function () {
     $admin = coachAdminLogin($this->org);
     $coach = User::factory()->create();
     $coach->organizations()->attach($this->org, ['role' => OrganizationRole::Coach->value]);
+    BackgroundCheck::factory()->for($this->org)->for($coach)->cleared()->create();
     $entry = TeamUser::create([
         'team_id' => $this->team->id,
         'user_id' => $coach->id,
@@ -197,6 +200,7 @@ test('a coach entry from another team returns 404 on update', function () {
     ]);
     $coach = User::factory()->create();
     $coach->organizations()->attach($this->org, ['role' => OrganizationRole::Coach->value]);
+    BackgroundCheck::factory()->for($this->org)->for($coach)->cleared()->create();
     $otherEntry = TeamUser::create([
         'team_id' => $otherTeam->id,
         'user_id' => $coach->id,
