@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { GripVertical } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
+import draggable from 'vuedraggable';
 import DivisionsController from '@/actions/App/Http/Controllers/Settings/DivisionsController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -23,7 +25,7 @@ type Division = {
     display_order: number;
 };
 
-defineProps<{ divisions: Division[] }>();
+const props = defineProps<{ divisions: Division[] }>();
 
 defineOptions({
     layout: {
@@ -35,6 +37,15 @@ defineOptions({
         ],
     },
 });
+
+const orderedDivisions = ref<Division[]>([...props.divisions]);
+
+watch(
+    () => props.divisions,
+    (next) => {
+        orderedDivisions.value = [...next];
+    },
+);
 
 const dialogOpen = ref(false);
 const editing = ref<Division | null>(null);
@@ -51,6 +62,14 @@ function openEdit(division: Division) {
 
 function dialogTitle() {
     return editing.value ? `Edit ${editing.value.name}` : 'New division';
+}
+
+function persistOrder() {
+    router.post(
+        DivisionsController.reorder.url(),
+        { ids: orderedDivisions.value.map((d) => d.id) },
+        { preserveScroll: true, preserveState: true },
+    );
 }
 </script>
 
@@ -74,51 +93,65 @@ function dialogTitle() {
         </div>
 
         <div
-            v-if="divisions.length === 0"
+            v-if="orderedDivisions.length === 0"
             class="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"
             data-test="divisions-empty"
         >
             No divisions yet. Create one before you build teams.
         </div>
 
-        <ul v-else class="divide-y rounded-lg border">
-            <li
-                v-for="division in divisions"
-                :key="division.id"
-                class="flex items-center justify-between gap-4 p-4"
-                :data-test="`division-row-${division.id}`"
-            >
-                <div class="space-y-1">
-                    <span class="font-medium">{{ division.name }}</span>
-                    <p class="text-xs text-muted-foreground">
-                        Display order: {{ division.display_order }}
-                    </p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        @click="openEdit(division)"
-                    >
-                        Edit
-                    </Button>
-                    <Form
-                        v-bind="DivisionsController.destroy.form(division.id)"
-                        class="inline"
-                        v-slot="{ processing }"
-                    >
-                        <Button
-                            type="submit"
-                            variant="ghost"
-                            class="text-destructive"
-                            :disabled="processing"
+        <draggable
+            v-else
+            v-model="orderedDivisions"
+            item-key="id"
+            handle=".drag-handle"
+            :animation="150"
+            ghost-class="opacity-50"
+            tag="ul"
+            class="divide-y rounded-lg border"
+            @end="persistOrder"
+        >
+            <template #item="{ element: division }">
+                <li
+                    class="flex items-center justify-between gap-4 p-4"
+                    :data-test="`division-row-${division.id}`"
+                >
+                    <div class="flex items-center gap-3">
+                        <button
+                            type="button"
+                            class="drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted active:cursor-grabbing"
+                            :aria-label="`Drag ${division.name}`"
                         >
-                            Archive
+                            <GripVertical class="size-4" />
+                        </button>
+                        <span class="font-medium">{{ division.name }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            @click="openEdit(division)"
+                        >
+                            Edit
                         </Button>
-                    </Form>
-                </div>
-            </li>
-        </ul>
+                        <Form
+                            v-bind="DivisionsController.destroy.form(division.id)"
+                            class="inline"
+                            v-slot="{ processing }"
+                        >
+                            <Button
+                                type="submit"
+                                variant="ghost"
+                                class="text-destructive"
+                                :disabled="processing"
+                            >
+                                Archive
+                            </Button>
+                        </Form>
+                    </div>
+                </li>
+            </template>
+        </draggable>
 
         <Dialog v-model:open="dialogOpen">
             <DialogContent>
@@ -151,18 +184,6 @@ function dialogTitle() {
                             placeholder="10U"
                         />
                         <InputError :message="errors.name" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="display_order">Display order</Label>
-                        <Input
-                            id="display_order"
-                            type="number"
-                            min="0"
-                            name="display_order"
-                            :default-value="editing?.display_order ?? 0"
-                        />
-                        <InputError :message="errors.display_order" />
                     </div>
 
                     <DialogFooter>

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Divisions\ReorderDivisionsRequest;
 use App\Http\Requests\Divisions\StoreDivisionRequest;
 use App\Http\Requests\Divisions\UpdateDivisionRequest;
 use App\Http\Resources\DivisionResource;
 use App\Models\Division;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,7 +34,14 @@ final class DivisionsController extends Controller
 
     public function store(StoreDivisionRequest $request): RedirectResponse
     {
-        Division::create($request->validated());
+        $data = $request->validated();
+
+        if (! array_key_exists('display_order', $data)) {
+            $max = Division::query()->max('display_order');
+            $data['display_order'] = is_numeric($max) ? ((int) $max) + 1 : 0;
+        }
+
+        Division::create($data);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Division created.')]);
 
@@ -44,6 +53,20 @@ final class DivisionsController extends Controller
         $division->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Division updated.')]);
+
+        return to_route('divisions.index');
+    }
+
+    public function reorder(ReorderDivisionsRequest $request): RedirectResponse
+    {
+        /** @var array<int, int> $ids */
+        $ids = $request->validated('ids');
+
+        DB::transaction(function () use ($ids): void {
+            foreach ($ids as $position => $id) {
+                Division::query()->whereKey($id)->update(['display_order' => $position]);
+            }
+        });
 
         return to_route('divisions.index');
     }

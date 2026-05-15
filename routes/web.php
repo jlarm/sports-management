@@ -129,6 +129,7 @@ Route::middleware(['auth', 'verified', 'tenant'])
     ->group(function () {
         Route::get('/', [DivisionsController::class, 'index'])->name('index');
         Route::post('/', [DivisionsController::class, 'store'])->name('store');
+        Route::post('reorder', [DivisionsController::class, 'reorder'])->name('reorder');
         Route::patch('{division}', [DivisionsController::class, 'update'])->name('update');
         Route::delete('{division}', [DivisionsController::class, 'destroy'])->name('destroy');
     });

@@ -128,6 +128,58 @@ test('admin can archive a division via soft delete', function () {
     expect(Division::query()->withoutGlobalScopes()->withTrashed()->find($division->id)?->trashed())->toBeTrue();
 });
 
+test('store auto-assigns the next display_order when omitted', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    Division::factory()->for($this->org)->create(['display_order' => 3]);
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.store'), ['name' => 'Varsity'])
+        ->assertRedirect(route('divisions.index'));
+
+    $division = Division::query()->where('name', 'Varsity')->firstOrFail();
+
+    expect($division->display_order)->toBe(4);
+});
+
+test('admin can reorder divisions and display_order reflects payload position', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    $a = Division::factory()->for($this->org)->create(['name' => 'A', 'display_order' => 0]);
+    $b = Division::factory()->for($this->org)->create(['name' => 'B', 'display_order' => 1]);
+    $c = Division::factory()->for($this->org)->create(['name' => 'C', 'display_order' => 2]);
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.reorder'), ['ids' => [$c->id, $a->id, $b->id]])
+        ->assertRedirect(route('divisions.index'));
+
+    expect($c->fresh()->display_order)->toBe(0)
+        ->and($a->fresh()->display_order)->toBe(1)
+        ->and($b->fresh()->display_order)->toBe(2);
+});
+
+test('coach cannot reorder divisions', function () {
+    $coach = divisionMemberLogin($this->org, OrganizationRole::Coach);
+    $division = Division::factory()->for($this->org)->create();
+
+    $this->actingAs($coach)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.reorder'), ['ids' => [$division->id]])
+        ->assertForbidden();
+});
+
+test('reorder rejects ids that belong to another organization', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    $mine = Division::factory()->for($this->org)->create();
+    $foreign = Division::factory()->for(Organization::factory()->create())->create();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->from(route('divisions.index'))
+        ->post(route('divisions.reorder'), ['ids' => [$mine->id, $foreign->id]])
+        ->assertSessionHasErrors('ids.1');
+});
+
 test('divisions from another organization 404 via route model binding', function () {
     $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
     $otherDivision = Division::factory()->for(Organization::factory()->create())->create();
