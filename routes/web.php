@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AuditLogs\AuditLogsController;
 use App\Http\Controllers\BackgroundChecks\BackgroundChecksController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormsController;
 use App\Http\Controllers\Forms\PublicFormController;
 use App\Http\Controllers\Forms\SubmissionsController;
@@ -39,8 +40,8 @@ Route::get('f/{form}/thanks', [PublicFormController::class, 'thanks'])
     ->whereNumber('form')
     ->name('public-forms.thanks');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 Route::middleware('auth')->group(function () {
