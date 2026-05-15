@@ -10,6 +10,7 @@ use App\Http\Requests\Divisions\StoreDivisionRequest;
 use App\Http\Requests\Divisions\UpdateDivisionRequest;
 use App\Http\Resources\DivisionResource;
 use App\Models\Division;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,13 +23,18 @@ final class DivisionsController extends Controller
     {
         $this->authorize('viewAny', Division::class);
 
+        $showArchived = $request->boolean('archived');
+
         $divisions = Division::query()
+            ->when($showArchived, fn (Builder $query): Builder => $query->onlyTrashed())
             ->orderBy('display_order')
             ->orderBy('name')
             ->get();
 
         return Inertia::render('divisions/Index', [
             'divisions' => DivisionResource::collection($divisions)->toArray($request),
+            'archived' => $showArchived,
+            'archived_count' => Division::query()->onlyTrashed()->count(),
         ]);
     }
 
@@ -78,6 +84,17 @@ final class DivisionsController extends Controller
         $division->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Division archived.')]);
+
+        return to_route('divisions.index');
+    }
+
+    public function restore(Division $division): RedirectResponse
+    {
+        $this->authorize('restore', $division);
+
+        $division->restore();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Division restored.')]);
 
         return to_route('divisions.index');
     }

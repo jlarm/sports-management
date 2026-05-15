@@ -132,6 +132,9 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('reorder', [DivisionsController::class, 'reorder'])->name('reorder');
         Route::patch('{division}', [DivisionsController::class, 'update'])->name('update');
         Route::delete('{division}', [DivisionsController::class, 'destroy'])->name('destroy');
+        Route::post('{division}/restore', [DivisionsController::class, 'restore'])
+            ->withTrashed()
+            ->name('restore');
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

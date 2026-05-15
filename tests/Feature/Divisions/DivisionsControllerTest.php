@@ -35,6 +35,27 @@ test('index renders the divisions inertia page ordered by display_order then nam
             ->where('divisions.0.name', 'Beta')
             ->where('divisions.1.name', 'Zeta')
             ->where('divisions.2.name', 'Alpha')
+            ->where('archived', false)
+            ->where('archived_count', 0)
+        );
+});
+
+test('index with archived=1 returns only soft-deleted divisions', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    Division::factory()->for($this->org)->create(['name' => 'Active']);
+    $trashed = Division::factory()->for($this->org)->create(['name' => 'Old']);
+    $trashed->delete();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->get(route('divisions.index', ['archived' => 1]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('divisions/Index')
+            ->has('divisions', 1)
+            ->where('divisions.0.name', 'Old')
+            ->where('archived', true)
+            ->where('archived_count', 1)
         );
 });
 
@@ -187,5 +208,40 @@ test('divisions from another organization 404 via route model binding', function
     $this->actingAs($admin)
         ->withSession(['current_org_id' => $this->org->id])
         ->patch(route('divisions.update', $otherDivision), ['name' => 'Hijack'])
+        ->assertNotFound();
+});
+
+test('admin can restore an archived division', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    $division = Division::factory()->for($this->org)->create();
+    $division->delete();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.restore', $division))
+        ->assertRedirect(route('divisions.index'));
+
+    expect($division->fresh()?->trashed())->toBeFalse();
+});
+
+test('coach cannot restore an archived division', function () {
+    $coach = divisionMemberLogin($this->org, OrganizationRole::Coach);
+    $division = Division::factory()->for($this->org)->create();
+    $division->delete();
+
+    $this->actingAs($coach)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.restore', $division))
+        ->assertForbidden();
+});
+
+test('restoring an archived division from another organization 404s', function () {
+    $admin = divisionMemberLogin($this->org, OrganizationRole::Admin);
+    $foreign = Division::factory()->for(Organization::factory()->create())->create();
+    $foreign->delete();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->post(route('divisions.restore', $foreign))
         ->assertNotFound();
 });
