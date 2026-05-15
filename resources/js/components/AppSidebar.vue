@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import {
     CalendarRange,
     FileText,
+    History,
     LayoutGrid,
     Layers,
     MapPin,
@@ -24,6 +25,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as auditLogsIndex } from '@/routes/audit-logs';
 import { index as backgroundChecksIndex } from '@/routes/background-checks';
 import { index as divisionsIndex } from '@/routes/divisions';
 import { index as formsIndex } from '@/routes/forms';
@@ -82,6 +84,11 @@ const organizationNavItems: NavItem[] = [
         title: 'Background checks',
         href: backgroundChecksIndex(),
         icon: ShieldCheck,
+    },
+    {
+        title: 'Audit log',
+        href: auditLogsIndex(),
+        icon: History,
     },
 ];
 </script>

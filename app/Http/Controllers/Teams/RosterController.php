@@ -13,6 +13,7 @@ use App\Models\Team;
 use App\Models\TeamPlayer;
 use App\Models\TeamUser;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Tenancy\CurrentTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -120,7 +121,7 @@ final class RosterController extends Controller
         ]);
     }
 
-    public function store(StoreRosterEntryRequest $request, Team $team): RedirectResponse
+    public function store(StoreRosterEntryRequest $request, Team $team, AuditLogger $audit): RedirectResponse
     {
         $entry = new TeamPlayer([
             'jersey_number' => $request->filled('jersey_number')
@@ -133,6 +134,13 @@ final class RosterController extends Controller
         $entry->player_id = $request->integer('player_id');
         $entry->save();
 
+        $audit->log(
+            organizationId: $team->organization_id,
+            action: 'roster.added',
+            subject: $team,
+            payload: ['player_id' => $entry->player_id, 'jersey_number' => $entry->jersey_number],
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Player added to roster.')]);
 
         return to_route('teams.roster.show', $team);
@@ -142,6 +150,7 @@ final class RosterController extends Controller
         UpdateRosterEntryRequest $request,
         Team $team,
         TeamPlayer $rosterEntry,
+        AuditLogger $audit,
     ): RedirectResponse {
         abort_unless($rosterEntry->team_id === $team->id, 404);
 
@@ -153,18 +162,33 @@ final class RosterController extends Controller
             'is_captain' => $request->boolean('is_captain'),
         ]);
 
+        $audit->log(
+            organizationId: $team->organization_id,
+            action: 'roster.updated',
+            subject: $team,
+            payload: ['player_id' => $rosterEntry->player_id, 'jersey_number' => $rosterEntry->jersey_number],
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Roster entry updated.')]);
 
         return to_route('teams.roster.show', $team);
     }
 
-    public function destroy(Team $team, TeamPlayer $rosterEntry): RedirectResponse
+    public function destroy(Team $team, TeamPlayer $rosterEntry, AuditLogger $audit): RedirectResponse
     {
         abort_unless($rosterEntry->team_id === $team->id, 404);
 
         $this->authorize('manageRoster', $team);
 
+        $playerId = $rosterEntry->player_id;
         $rosterEntry->delete();
+
+        $audit->log(
+            organizationId: $team->organization_id,
+            action: 'roster.removed',
+            subject: $team,
+            payload: ['player_id' => $playerId],
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Player removed from roster.')]);
 

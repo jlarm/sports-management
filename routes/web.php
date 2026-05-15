@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AuditLogs\AuditLogsController;
 use App\Http\Controllers\BackgroundChecks\BackgroundChecksController;
 use App\Http\Controllers\Forms\FormsController;
 use App\Http\Controllers\Forms\PublicFormController;
@@ -150,6 +151,13 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::post('/', [InvitationsController::class, 'store'])->name('store');
         Route::post('{invitation}/resend', [InvitationsController::class, 'resend'])->name('resend');
         Route::delete('{invitation}', [InvitationsController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'tenant'])
+    ->prefix('audit-logs')
+    ->name('audit-logs.')
+    ->group(function () {
+        Route::get('/', [AuditLogsController::class, 'index'])->name('index');
     });
 
 Route::middleware(['auth', 'verified', 'tenant'])

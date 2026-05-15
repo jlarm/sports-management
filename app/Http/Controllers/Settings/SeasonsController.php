@@ -9,6 +9,7 @@ use App\Http\Requests\Seasons\StoreSeasonRequest;
 use App\Http\Requests\Seasons\UpdateSeasonRequest;
 use App\Http\Resources\SeasonResource;
 use App\Models\Season;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,7 @@ final class SeasonsController extends Controller
         return to_route('seasons.index');
     }
 
-    public function activate(Season $season): RedirectResponse
+    public function activate(Season $season, AuditLogger $audit): RedirectResponse
     {
         $this->authorize('activate', $season);
 
@@ -68,6 +69,12 @@ final class SeasonsController extends Controller
             Season::query()->where('id', '!=', $season->id)->update(['is_active' => false]);
             $season->forceFill(['is_active' => true])->save();
         });
+
+        $audit->log(
+            organizationId: $season->organization_id,
+            action: 'season.activated',
+            subject: $season,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Season activated.')]);
 

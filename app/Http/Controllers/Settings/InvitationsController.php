@@ -37,7 +37,7 @@ final class InvitationsController extends Controller
         ]);
     }
 
-    public function store(StoreInvitationRequest $request): RedirectResponse
+    public function store(StoreInvitationRequest $request, AuditLogger $audit): RedirectResponse
     {
         $token = Invitation::mintToken();
         $email = $request->string('email')->lower()->toString();
@@ -61,17 +61,31 @@ final class InvitationsController extends Controller
         Notification::route('mail', $invitation->email)
             ->notify(new OrganizationInvitationNotification($invitation, $token['raw']));
 
+        $audit->log(
+            organizationId: $invitation->organization_id,
+            action: 'invitation.sent',
+            subject: $invitation,
+            payload: ['email' => $email, 'role' => $role],
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation sent.')]);
 
         return to_route('invitations.index');
     }
 
-    public function destroy(Invitation $invitation): RedirectResponse
+    public function destroy(Invitation $invitation, AuditLogger $audit): RedirectResponse
     {
         $this->authorize('delete', $invitation);
 
         if ($invitation->isPending()) {
             $invitation->forceFill(['revoked_at' => now()])->save();
+
+            $audit->log(
+                organizationId: $invitation->organization_id,
+                action: 'invitation.revoked',
+                subject: $invitation,
+                payload: ['email' => $invitation->email, 'role' => $invitation->role->value],
+            );
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation revoked.')]);

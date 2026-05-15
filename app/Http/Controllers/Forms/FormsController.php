@@ -12,6 +12,7 @@ use App\Http\Requests\Forms\StoreFormRequest;
 use App\Http\Requests\Forms\UpdateFormRequest;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
+use App\Services\Audit\AuditLogger;
 use App\Services\Consents\ConsentTextRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -116,24 +117,34 @@ final class FormsController extends Controller
         return to_route('forms.index');
     }
 
-    public function publish(Form $form): RedirectResponse
+    public function publish(Form $form, AuditLogger $audit): RedirectResponse
     {
         $this->authorize('publish', $form);
 
         if ($form->isDraft()) {
             $form->forceFill(['status' => FormStatus::Published->value])->save();
+            $audit->log(
+                organizationId: $form->organization_id,
+                action: 'form.published',
+                subject: $form,
+            );
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Form published.')]);
         }
 
         return to_route('forms.index');
     }
 
-    public function close(Form $form): RedirectResponse
+    public function close(Form $form, AuditLogger $audit): RedirectResponse
     {
         $this->authorize('close', $form);
 
         if ($form->isPublished()) {
             $form->forceFill(['status' => FormStatus::Closed->value])->save();
+            $audit->log(
+                organizationId: $form->organization_id,
+                action: 'form.closed',
+                subject: $form,
+            );
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Form closed.')]);
         }
 
