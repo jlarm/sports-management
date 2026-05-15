@@ -79,6 +79,8 @@ Route::middleware(['auth', 'verified', 'tenant'])
             Route::get('{submission}', [SubmissionsController::class, 'show'])->name('show');
             Route::get('{submission}/review', [SubmissionsController::class, 'review'])->name('review');
             Route::post('{submission}/process', [SubmissionsController::class, 'process'])->name('process');
+            Route::post('{submission}/consents/{consent}/withdraw', [SubmissionsController::class, 'withdrawConsent'])
+                ->name('consents.withdraw');
         });
     });
 

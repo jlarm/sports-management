@@ -8,11 +8,13 @@ use App\Enums\MatchAction;
 use App\Enums\SubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Submissions\ProcessSubmissionRequest;
+use App\Models\Consent;
 use App\Models\Form;
 use App\Models\Guardian;
 use App\Models\Player;
 use App\Models\Submission;
 use App\Models\SubmissionDecision;
+use App\Services\Audit\AuditLogger;
 use App\Services\Submissions\MatchResult;
 use App\Services\Submissions\SubmissionMatcher;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +66,13 @@ final class SubmissionsController extends Controller
 
         abort_unless($submission->form_id === $form->id, 404);
 
-        $submission->loadMissing(['submittedBy', 'decisions.decidedBy', 'decisions.player', 'decisions.guardian']);
+        $submission->loadMissing([
+            'submittedBy',
+            'decisions.decidedBy',
+            'decisions.player',
+            'decisions.guardian',
+            'consents.withdrawnBy',
+        ]);
 
         return Inertia::render('forms/submissions/Show', [
             'form' => [
@@ -87,6 +95,7 @@ final class SubmissionsController extends Controller
                         'email' => $submission->submittedBy->email,
                     ]
                     : null,
+                'consents' => $this->consentsPayload($submission),
                 'decisions' => $submission->decisions
                     ->sortByDesc('decided_at')
                     ->values()
@@ -121,6 +130,7 @@ final class SubmissionsController extends Controller
         abort_unless($submission->form_id === $form->id, 404);
 
         $result = $matcher->match($submission);
+        $submission->loadMissing('consents');
 
         return Inertia::render('forms/submissions/Review', [
             'form' => [
@@ -134,12 +144,13 @@ final class SubmissionsController extends Controller
                 'status_label' => $submission->status->label(),
                 'data' => $submission->data,
                 'schema_snapshot' => $submission->schema_snapshot,
+                'consents' => $this->consentsPayload($submission),
             ],
             'match' => $this->matchPayload($result),
         ]);
     }
 
-    public function process(ProcessSubmissionRequest $request, Form $form, Submission $submission): RedirectResponse
+    public function process(ProcessSubmissionRequest $request, Form $form, Submission $submission, AuditLogger $audit): RedirectResponse
     {
         abort_unless($submission->form_id === $form->id, 404);
 
@@ -166,6 +177,7 @@ final class SubmissionsController extends Controller
             $request,
             $decidedById,
             $orgId,
+            $audit,
         ): void {
             $playerId = $this->resolvePlayer($playerAction, $playerInput, $request->integer('player_id'), $orgId);
             $guardianId = $this->resolveGuardian($guardianAction, $guardianInput, $request->integer('guardian_id'), $orgId);
@@ -175,7 +187,17 @@ final class SubmissionsController extends Controller
                 $player->guardians()->syncWithoutDetaching([$guardianId]);
             }
 
-            SubmissionDecision::query()->create([
+            if ($playerId !== null || $guardianId !== null) {
+                Consent::query()->withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->where('submission_id', $submission->id)
+                    ->update([
+                        'player_id' => $playerId,
+                        'guardian_id' => $guardianId,
+                    ]);
+            }
+
+            $decision = SubmissionDecision::query()->create([
                 'organization_id' => $orgId,
                 'submission_id' => $submission->id,
                 'decided_by_user_id' => $decidedById,
@@ -192,9 +214,68 @@ final class SubmissionsController extends Controller
                     ? SubmissionStatus::Skipped
                     : SubmissionStatus::Processed,
             ])->save();
+
+            $audit->log(
+                organizationId: $orgId,
+                action: 'submission.processed',
+                subject: $submission,
+                payload: [
+                    'decision_id' => $decision->id,
+                    'player_action' => $playerAction->value,
+                    'guardian_action' => $guardianAction->value,
+                    'player_id' => $playerId,
+                    'guardian_id' => $guardianId,
+                ],
+            );
         });
 
         return to_route('forms.submissions.show', [$form, $submission]);
+    }
+
+    public function withdrawConsent(Form $form, Submission $submission, Consent $consent, AuditLogger $audit): RedirectResponse
+    {
+        $this->authorize('withdraw', $consent);
+
+        abort_unless($submission->form_id === $form->id, 404);
+        abort_unless($consent->submission_id === $submission->id, 404);
+
+        $consent->forceFill([
+            'withdrawn_at' => now(),
+            'withdrawn_by_user_id' => request()->user()?->id,
+        ])->save();
+
+        $audit->log(
+            organizationId: $consent->organization_id,
+            action: 'consent.withdrawn',
+            subject: $consent,
+            payload: ['consent_type' => $consent->consent_type->value, 'submission_id' => $submission->id],
+        );
+
+        return to_route('forms.submissions.show', [$form, $submission]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function consentsPayload(Submission $submission): array
+    {
+        return $submission->consents
+            ->sortBy('consent_type')
+            ->values()
+            ->map(fn (Consent $consent): array => [
+                'id' => $consent->id,
+                'type' => $consent->consent_type->value,
+                'type_label' => $consent->consent_type->label(),
+                'version' => $consent->consent_text_version,
+                'accepted_at' => $consent->accepted_at->toIso8601String(),
+                'text_snapshot' => $consent->consent_text_snapshot,
+                'is_withdrawn' => $consent->isWithdrawn(),
+                'withdrawn_at' => $consent->withdrawn_at?->toIso8601String(),
+                'withdrawn_by' => $consent->relationLoaded('withdrawnBy') && $consent->withdrawnBy !== null
+                    ? ['name' => $consent->withdrawnBy->name]
+                    : null,
+            ])
+            ->all();
     }
 
     /**

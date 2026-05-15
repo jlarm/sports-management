@@ -26,6 +26,7 @@ final class FormResource extends JsonResource
             'status_label' => $this->status->label(),
             'schema' => $this->schema,
             'schema_version' => $this->schema_version,
+            'required_consents' => $this->required_consents ?? [],
         ];
     }
 }

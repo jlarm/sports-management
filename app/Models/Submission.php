@@ -67,6 +67,14 @@ final class Submission extends Model
     }
 
     /**
+     * @return HasMany<Consent, $this>
+     */
+    public function consents(): HasMany
+    {
+        return $this->hasMany(Consent::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

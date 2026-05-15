@@ -23,12 +23,20 @@ type FieldShape = {
     options?: string[];
 };
 
+type ConsentEntry = {
+    type: string;
+    label: string;
+    text: string;
+    version: number;
+};
+
 type FormPayload = {
     id: number;
     title: string;
     description: string | null;
     schema: { fields: FieldShape[] };
     schema_version: number;
+    consents: ConsentEntry[];
 };
 
 defineProps<{ form: FormPayload }>();
@@ -118,6 +126,35 @@ defineOptions({ layout: null });
                         </label>
 
                         <InputError :message="errors[`data.${field.key}`]" />
+                    </div>
+
+                    <div
+                        v-if="form.consents.length > 0"
+                        class="space-y-3 border-t pt-4"
+                        data-test="respond-consents"
+                    >
+                        <h3 class="text-sm font-semibold">Required consents</h3>
+                        <div
+                            v-for="consent in form.consents"
+                            :key="consent.type"
+                            class="space-y-2 rounded-lg border p-3"
+                        >
+                            <p class="text-xs font-medium text-muted-foreground">
+                                {{ consent.label }} · v{{ consent.version }}
+                            </p>
+                            <p class="text-sm leading-snug">{{ consent.text }}</p>
+                            <label class="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    :name="`consents[${consent.type}]`"
+                                    value="1"
+                                    class="h-4 w-4 rounded border-input"
+                                    :data-test="`consent-${consent.type}`"
+                                />
+                                <span>I accept</span>
+                            </label>
+                            <InputError :message="errors[`consents.${consent.type}`]" />
+                        </div>
                     </div>
                 </CardContent>
 

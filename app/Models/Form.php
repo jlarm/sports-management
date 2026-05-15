@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\BelongsToOrganization;
+use App\Enums\ConsentType;
 use App\Enums\FormStatus;
 use Database\Factories\FormFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -21,8 +22,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property FormStatus $status
  * @property array{fields: array<int, array<string, mixed>>} $schema
  * @property int $schema_version
+ * @property ?array<int, string> $required_consents
  */
-#[Fillable(['title', 'description', 'status', 'schema', 'schema_version'])]
+#[Fillable(['title', 'description', 'status', 'schema', 'schema_version', 'required_consents'])]
 final class Form extends Model
 {
     use BelongsToOrganization;
@@ -54,6 +56,18 @@ final class Form extends Model
     }
 
     /**
+     * @return array<int, ConsentType>
+     */
+    public function requiredConsentTypes(): array
+    {
+        $values = $this->required_consents ?? [];
+
+        return array_values(array_filter(
+            array_map(ConsentType::tryFrom(...), $values),
+        ));
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -62,6 +76,7 @@ final class Form extends Model
             'status' => FormStatus::class,
             'schema' => 'array',
             'schema_version' => 'integer',
+            'required_consents' => 'array',
         ];
     }
 }

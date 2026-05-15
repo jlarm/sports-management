@@ -60,6 +60,14 @@ type MatchPayload = {
     guardian: { extracted: ExtractedGuardian; candidates: GuardianCandidate[] };
 };
 
+type ConsentRow = {
+    id: number;
+    type: string;
+    type_label: string;
+    version: number;
+    accepted_at: string;
+};
+
 type SubmissionPayload = {
     id: number;
     submitted_at: string;
@@ -67,6 +75,7 @@ type SubmissionPayload = {
     status_label: string;
     data: Record<string, unknown>;
     schema_snapshot: { fields: FieldShape[] };
+    consents: ConsentRow[];
 };
 
 type FormPayload = { id: number; title: string };
@@ -157,6 +166,19 @@ function displayValue(value: unknown): string {
                 <Link :href="submissionsIndex(form.id)">Back</Link>
             </Button>
         </div>
+
+        <section
+            v-if="submission.consents.length > 0"
+            class="space-y-2 rounded-lg border p-3"
+            data-test="review-consents"
+        >
+            <h3 class="text-sm font-semibold">Consents captured</h3>
+            <ul class="space-y-1 text-sm">
+                <li v-for="consent in submission.consents" :key="consent.id">
+                    {{ consent.type_label }} · v{{ consent.version }}
+                </li>
+            </ul>
+        </section>
 
         <section class="space-y-3" data-test="review-submission-data">
             <h3 class="text-sm font-semibold">Submitted data</h3>

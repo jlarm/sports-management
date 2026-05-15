@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, setLayoutProps } from '@inertiajs/vue3';
+import { Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
 import { index as formsIndex } from '@/routes/forms';
+import { withdraw as consentWithdraw } from '@/routes/forms/submissions/consents';
 import { review as submissionReview, index as submissionsIndex, show as submissionShow } from '@/routes/forms/submissions';
 
 type FieldShape = {
@@ -39,6 +40,19 @@ type SubmissionPayload = {
     data: Record<string, unknown>;
     submitted_by: { name: string; email: string } | null;
     decisions: DecisionRow[];
+    consents: ConsentRow[];
+};
+
+type ConsentRow = {
+    id: number;
+    type: string;
+    type_label: string;
+    version: number;
+    accepted_at: string;
+    text_snapshot: string;
+    is_withdrawn: boolean;
+    withdrawn_at: string | null;
+    withdrawn_by: { name: string } | null;
 };
 
 type FormPayload = {
@@ -63,6 +77,13 @@ setLayoutProps({
         },
     ],
 });
+
+function withdrawConsent(consent: ConsentRow) {
+    if (!window.confirm(`Withdraw ${consent.type_label}? This cannot be undone.`)) return;
+    router.post(consentWithdraw([props.form.id, props.submission.id, consent.id]).url, {}, {
+        preserveScroll: true,
+    });
+}
 
 function displayValue(value: unknown): string {
     if (value === null || value === undefined || value === '') return '—';
@@ -133,6 +154,42 @@ function displayValue(value: unknown): string {
                 </dd>
             </div>
         </dl>
+
+        <div v-if="submission.consents.length > 0" class="space-y-3" data-test="submission-consents">
+            <h3 class="text-sm font-semibold">Consents on record</h3>
+            <ul class="divide-y rounded-lg border">
+                <li
+                    v-for="consent in submission.consents"
+                    :key="consent.id"
+                    class="space-y-2 p-4 text-sm"
+                    :data-test="`consent-row-${consent.id}`"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="font-medium">{{ consent.type_label }} · v{{ consent.version }}</p>
+                            <p class="text-xs text-muted-foreground">
+                                Accepted {{ formatDateTime(consent.accepted_at) }}
+                                <span v-if="consent.is_withdrawn">
+                                    · withdrawn {{ formatDateTime(consent.withdrawn_at ?? '') }}
+                                    <span v-if="consent.withdrawn_by"> by {{ consent.withdrawn_by.name }}</span>
+                                </span>
+                            </p>
+                        </div>
+                        <Button
+                            v-if="!consent.is_withdrawn"
+                            size="sm"
+                            variant="ghost"
+                            :data-test="`consent-withdraw-${consent.id}`"
+                            @click="withdrawConsent(consent)"
+                        >
+                            Withdraw
+                        </Button>
+                        <Badge v-else variant="outline">Withdrawn</Badge>
+                    </div>
+                    <p class="text-xs text-muted-foreground">{{ consent.text_snapshot }}</p>
+                </li>
+            </ul>
+        </div>
 
         <div v-if="submission.decisions.length > 0" class="space-y-3">
             <h3 class="text-sm font-semibold">Processing history</h3>

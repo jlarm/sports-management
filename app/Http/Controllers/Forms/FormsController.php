@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Forms;
 
+use App\Enums\ConsentType;
 use App\Enums\FieldType;
 use App\Enums\FormStatus;
 use App\Http\Controllers\Controller;
@@ -11,6 +12,7 @@ use App\Http\Requests\Forms\StoreFormRequest;
 use App\Http\Requests\Forms\UpdateFormRequest;
 use App\Http\Resources\FormResource;
 use App\Models\Form;
+use App\Services\Consents\ConsentTextRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,7 +33,7 @@ final class FormsController extends Controller
         ]);
     }
 
-    public function edit(Request $request, Form $form): Response
+    public function edit(Request $request, Form $form, ConsentTextRegistry $consents): Response
     {
         $this->authorize('update', $form);
 
@@ -44,9 +46,19 @@ final class FormsController extends Controller
             FieldType::cases(),
         );
 
+        $consentOptions = array_map(
+            fn (ConsentType $type): array => [
+                'value' => $type->value,
+                'label' => $type->label(),
+                'text' => $consents->entry($type)['text'],
+            ],
+            ConsentType::cases(),
+        );
+
         return Inertia::render('forms/Edit', [
             'form' => new FormResource($form)->toArray($request),
             'fieldTypeOptions' => $fieldTypeOptions,
+            'consentOptions' => $consentOptions,
         ]);
     }
 
@@ -74,6 +86,10 @@ final class FormsController extends Controller
         $newSchema = $request->validated()['schema'];
         $schemaChanged = $form->schema !== $newSchema;
 
+        $validated = $request->validated();
+        /** @var array<int, string>|null $requiredConsents */
+        $requiredConsents = $validated['required_consents'] ?? null;
+
         $form->update([
             'title' => $request->string('title')->toString(),
             'description' => $request->string('description')->toString() ?: null,
@@ -81,6 +97,7 @@ final class FormsController extends Controller
             'schema_version' => $schemaChanged && $form->isPublished()
                 ? $form->schema_version + 1
                 : $form->schema_version,
+            'required_consents' => $requiredConsents === null || $requiredConsents === [] ? null : array_values($requiredConsents),
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Form updated.')]);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\BattingHand;
+use App\Enums\ConsentType;
 use App\Enums\FieldType;
 use App\Enums\FormStatus;
 use App\Enums\MatchAction;
@@ -12,6 +13,7 @@ use App\Enums\OrganizationRole;
 use App\Enums\SubmissionStatus;
 use App\Enums\TeamRole;
 use App\Enums\ThrowingHand;
+use App\Models\Consent;
 use App\Models\Division;
 use App\Models\Form;
 use App\Models\Guardian;
@@ -256,6 +258,11 @@ final class DatabaseSeeder extends Seeder
                 ],
             ],
             'schema_version' => 1,
+            'required_consents' => [
+                ConsentType::Registration->value,
+                ConsentType::MediaRelease->value,
+                ConsentType::MedicalTreatment->value,
+            ],
         ]);
 
         Form::factory()->for($organization)->create([
@@ -317,13 +324,30 @@ final class DatabaseSeeder extends Seeder
 
         $createdSubmissions = [];
         foreach ($submissions as $data) {
-            $createdSubmissions[] = Submission::factory()->for($organization)->for($springFormFresh)->create([
+            $submission = Submission::factory()->for($organization)->for($springFormFresh)->create([
                 'submitted_by_user_id' => null,
                 'schema_snapshot' => $springFormFresh->schema,
                 'schema_version' => $springFormFresh->schema_version,
                 'data' => $data,
                 'submitted_at' => now()->subDays(random_int(1, 14)),
             ]);
+
+            foreach ($springFormFresh->requiredConsentTypes() as $type) {
+                /** @var array<string, mixed> $entry */
+                $entry = config('coppa.consents.'.$type->value, []);
+                Consent::query()->create([
+                    'organization_id' => $organization->id,
+                    'submission_id' => $submission->id,
+                    'consent_type' => $type,
+                    'consent_text_snapshot' => is_string($entry['text'] ?? null) ? $entry['text'] : '',
+                    'consent_text_version' => is_int($entry['version'] ?? null) ? $entry['version'] : 1,
+                    'accepted_at' => $submission->submitted_at,
+                    'ip_address' => '198.51.100.42',
+                    'user_agent' => 'Mozilla/5.0 (Seeded demo)',
+                ]);
+            }
+
+            $createdSubmissions[] = $submission;
         }
 
         $murphySubmission = $createdSubmissions[1];
@@ -342,6 +366,11 @@ final class DatabaseSeeder extends Seeder
         ]);
         $murphyPlayer->guardians()->attach($murphyGuardian->id, ['is_primary' => true]);
         $murphySubmission->forceFill(['status' => SubmissionStatus::Processed])->save();
+        Consent::query()
+            ->withoutGlobalScopes()
+            ->where('organization_id', $organization->id)
+            ->where('submission_id', $murphySubmission->id)
+            ->update(['player_id' => $murphyPlayer->id, 'guardian_id' => $murphyGuardian->id]);
         SubmissionDecision::query()->create([
             'organization_id' => $organization->id,
             'submission_id' => $murphySubmission->id,

@@ -49,6 +49,7 @@ type FormShape = {
     status_label: string;
     schema: { fields: FieldShape[] };
     schema_version: number;
+    required_consents: string[];
 };
 
 type FieldTypeOption = {
@@ -57,9 +58,16 @@ type FieldTypeOption = {
     requires_options: boolean;
 };
 
+type ConsentOption = {
+    value: string;
+    label: string;
+    text: string;
+};
+
 const props = defineProps<{
     form: FormShape;
     fieldTypeOptions: FieldTypeOption[];
+    consentOptions: ConsentOption[];
 }>();
 
 setLayoutProps({
@@ -108,6 +116,7 @@ const builder = useForm({
             options: field.options ?? [],
         })) as DraggableField[],
     },
+    required_consents: [...props.form.required_consents],
 });
 
 const readOnly = computed(() => props.form.status === 'closed');
@@ -505,6 +514,36 @@ function fieldError(index: number, attr: string): string | undefined {
                     </draggable>
                 </section>
             </div>
+
+            <section class="space-y-3 rounded-lg border p-4" data-test="required-consents-picker">
+                <h2 class="text-sm font-semibold">Required parental consents</h2>
+                <p class="text-xs text-muted-foreground">
+                    Public respondents will see these as required checkboxes. The exact text
+                    shown at submission time is snapshotted on each consent record.
+                </p>
+                <div class="space-y-2">
+                    <label
+                        v-for="option in consentOptions"
+                        :key="option.value"
+                        class="flex items-start gap-3 rounded-md border p-3 text-sm"
+                    >
+                        <input
+                            v-model="builder.required_consents"
+                            type="checkbox"
+                            :value="option.value"
+                            :disabled="readOnly"
+                            class="mt-1 h-4 w-4 rounded border-input"
+                            :data-test="`consent-toggle-${option.value}`"
+                        />
+                        <span class="flex-1 space-y-1">
+                            <span class="block font-medium">{{ option.label }}</span>
+                            <span class="block text-xs text-muted-foreground">
+                                {{ option.text }}
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </section>
 
             <div class="flex justify-end">
                 <Button type="submit" :disabled="builder.processing || readOnly">
