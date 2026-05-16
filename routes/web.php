@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified', 'tenant'])
         Route::get('/', [FormsController::class, 'index'])->name('index');
         Route::post('/', [FormsController::class, 'store'])->name('store');
         Route::get('{form}/edit', [FormsController::class, 'edit'])->name('edit');
+        Route::get('{form}/preview', [FormsController::class, 'preview'])->name('preview');
         Route::patch('{form}', [FormsController::class, 'update'])->name('update');
         Route::delete('{form}', [FormsController::class, 'destroy'])->name('destroy');
         Route::post('{form}/publish', [FormsController::class, 'publish'])->name('publish');

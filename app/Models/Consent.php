@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property ?int $guardian_id
  * @property ?int $player_id
  * @property ConsentType $consent_type
+ * @property ?string $consent_label
  * @property string $consent_text_snapshot
  * @property int $consent_text_version
  * @property CarbonImmutable $accepted_at
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'guardian_id',
     'player_id',
     'consent_type',
+    'consent_label',
     'consent_text_snapshot',
     'consent_text_version',
     'accepted_at',

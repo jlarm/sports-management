@@ -89,6 +89,31 @@ final class PublicFormController extends Controller
                 );
             }
 
+            foreach ($resolved->customConsents() as $customEntry) {
+                $consent = Consent::query()->create([
+                    'organization_id' => $resolved->organization_id,
+                    'submission_id' => $submission->id,
+                    'consent_type' => ConsentType::Custom,
+                    'consent_label' => $customEntry['label'],
+                    'consent_text_snapshot' => $customEntry['text'],
+                    'consent_text_version' => 1,
+                    'accepted_at' => now(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => mb_substr((string) $request->userAgent(), 0, 255),
+                ]);
+
+                $audit->log(
+                    organizationId: $resolved->organization_id,
+                    action: 'consent.granted',
+                    subject: $consent,
+                    payload: [
+                        'consent_type' => ConsentType::Custom->value,
+                        'consent_key' => $customEntry['key'],
+                        'submission_id' => $submission->id,
+                    ],
+                );
+            }
+
             return $submission;
         });
 
@@ -151,20 +176,31 @@ final class PublicFormController extends Controller
     }
 
     /**
-     * @return array<int, array{type: string, label: string, text: string, version: int}>
+     * @return array<int, array{type: string, key: string, label: string, text: string, version: int}>
      */
     private function consentsPayload(Form $form): array
     {
-        return array_map(function (ConsentType $type): array {
+        $presets = array_map(function (ConsentType $type): array {
             $entry = $this->consentText->entry($type);
 
             return [
                 'type' => $type->value,
+                'key' => $type->value,
                 'label' => $type->label(),
                 'text' => $entry['text'],
                 'version' => $entry['version'],
             ];
         }, $form->requiredConsentTypes());
+
+        $custom = array_map(fn (array $entry): array => [
+            'type' => ConsentType::Custom->value,
+            'key' => $entry['key'],
+            'label' => $entry['label'],
+            'text' => $entry['text'],
+            'version' => 1,
+        ], $form->customConsents());
+
+        return array_merge($presets, $custom);
     }
 
     /**
@@ -192,13 +228,16 @@ final class PublicFormController extends Controller
             $type = is_string($rawType) ? FieldType::tryFrom($rawType) : null;
 
             match ($type) {
-                FieldType::Text, FieldType::Textarea => $fieldRules[] = 'string',
+                FieldType::Text, FieldType::Textarea, FieldType::Name => $fieldRules[] = 'string',
                 FieldType::Number => $fieldRules[] = 'numeric',
                 FieldType::Date => $fieldRules[] = 'date',
+                FieldType::Email => $fieldRules[] = 'email:rfc',
+                FieldType::Phone => $fieldRules[] = 'string',
                 FieldType::Select => $fieldRules[] = Rule::in(
                     is_array($field['options'] ?? null) ? $field['options'] : []
                 ),
-                FieldType::Checkbox => $fieldRules[] = 'boolean',
+                FieldType::Checkboxes => $fieldRules[] = 'array',
+                FieldType::Toggle => $fieldRules[] = 'boolean',
                 null => null,
             };
 
@@ -206,14 +245,35 @@ final class PublicFormController extends Controller
                 $fieldRules[] = 'max:5000';
             }
 
+            if (in_array($type, [FieldType::Name, FieldType::Email], true)) {
+                $fieldRules[] = 'max:255';
+            }
+
+            if ($type === FieldType::Phone) {
+                $fieldRules[] = 'regex:/^\d{3}-\d{3}-\d{4}$/';
+            }
+
             $rules['data.'.$key] = $fieldRules;
+
+            if ($type === FieldType::Checkboxes) {
+                $rules['data.'.$key.'.*'] = [
+                    Rule::in(is_array($field['options'] ?? null) ? $field['options'] : []),
+                ];
+            }
         }
 
         $requiredConsents = $form->requiredConsentTypes();
-        if ($requiredConsents !== []) {
+        $customConsents = $form->customConsents();
+
+        if ($requiredConsents !== [] || $customConsents !== []) {
             $rules['consents'] = ['required', 'array'];
+
             foreach ($requiredConsents as $type) {
                 $rules['consents.'.$type->value] = ['accepted'];
+            }
+
+            foreach ($customConsents as $entry) {
+                $rules['consents.'.$entry['key']] = ['accepted'];
             }
         }
 

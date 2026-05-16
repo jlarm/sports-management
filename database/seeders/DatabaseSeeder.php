@@ -260,12 +260,6 @@ final class DatabaseSeeder extends Seeder
                         'type' => FieldType::Text->value,
                         'required' => true,
                     ],
-                    [
-                        'key' => 'media_release',
-                        'label' => 'I consent to team photos being shared publicly',
-                        'type' => FieldType::Checkbox->value,
-                        'required' => false,
-                    ],
                 ],
             ],
             'schema_version' => 1,

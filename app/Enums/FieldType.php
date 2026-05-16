@@ -11,7 +11,11 @@ enum FieldType: string
     case Number = 'number';
     case Date = 'date';
     case Select = 'select';
-    case Checkbox = 'checkbox';
+    case Checkboxes = 'checkboxes';
+    case Toggle = 'toggle';
+    case Email = 'email';
+    case Name = 'name';
+    case Phone = 'phone';
 
     public function label(): string
     {
@@ -20,13 +24,17 @@ enum FieldType: string
             self::Textarea => 'Long text',
             self::Number => 'Number',
             self::Date => 'Date',
-            self::Select => 'Choice',
-            self::Checkbox => 'Checkbox',
+            self::Select => 'Dropdown',
+            self::Checkboxes => 'Checkboxes',
+            self::Toggle => 'Toggle',
+            self::Email => 'Email',
+            self::Name => 'Name',
+            self::Phone => 'Phone',
         };
     }
 
     public function requiresOptions(): bool
     {
-        return $this === self::Select;
+        return $this === self::Select || $this === self::Checkboxes;
     }
 }

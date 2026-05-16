@@ -91,8 +91,33 @@ test('edit page renders for a draft form', function () {
         ->assertInertia(fn ($page) => $page
             ->component('forms/Edit')
             ->where('form.id', $form->id)
-            ->has('fieldTypeOptions', 6)
+            ->has('fieldTypeOptions', 10)
         );
+});
+
+test('preview page renders Respond.vue with preview flag for editors', function () {
+    $admin = formMemberLogin($this->org, OrganizationRole::Admin);
+    $form = Form::factory()->for($this->org)->create();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->get(route('forms.preview', $form))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('forms/Respond')
+            ->where('form.id', $form->id)
+            ->where('preview', true)
+        );
+});
+
+test('preview page is forbidden for users without update permission', function () {
+    $coach = formMemberLogin($this->org, OrganizationRole::Coach);
+    $form = Form::factory()->for($this->org)->create();
+
+    $this->actingAs($coach)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->get(route('forms.preview', $form))
+        ->assertForbidden();
 });
 
 test('store rejects schema with duplicate field keys', function () {
@@ -130,6 +155,30 @@ test('updating a draft does not bump schema_version', function () {
         ->assertRedirect(route('forms.edit', $form));
 
     expect($form->fresh()->schema_version)->toBe(1);
+});
+
+test('update persists custom_consents on the form', function () {
+    $admin = formMemberLogin($this->org, OrganizationRole::Admin);
+    $form = Form::factory()->for($this->org)->create();
+
+    $this->actingAs($admin)
+        ->withSession(['current_org_id' => $this->org->id])
+        ->patch(route('forms.update', $form), [
+            'title' => $form->title,
+            'schema' => [
+                'fields' => [
+                    ['key' => 'name', 'label' => 'Name', 'type' => 'name', 'required' => true],
+                ],
+            ],
+            'custom_consents' => [
+                ['key' => 'parking', 'label' => 'Parking rules', 'text' => 'I will not park in the bus loop.'],
+            ],
+        ])
+        ->assertRedirect(route('forms.edit', $form));
+
+    expect($form->fresh()->custom_consents)->toEqual([
+        ['key' => 'parking', 'label' => 'Parking rules', 'text' => 'I will not park in the bus loop.'],
+    ]);
 });
 
 test('updating a published forms schema bumps schema_version', function () {

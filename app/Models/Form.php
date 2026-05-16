@@ -23,8 +23,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property array{fields: array<int, array<string, mixed>>} $schema
  * @property int $schema_version
  * @property ?array<int, string> $required_consents
+ * @property ?array<int, array<string, mixed>> $custom_consents
  */
-#[Fillable(['title', 'description', 'status', 'schema', 'schema_version', 'required_consents'])]
+#[Fillable(['title', 'description', 'status', 'schema', 'schema_version', 'required_consents', 'custom_consents'])]
 final class Form extends Model
 {
     use BelongsToOrganization;
@@ -68,6 +69,24 @@ final class Form extends Model
     }
 
     /**
+     * @return array<int, array{key: string, label: string, text: string}>
+     */
+    public function customConsents(): array
+    {
+        $values = $this->custom_consents ?? [];
+
+        return array_values(array_filter(
+            $values,
+            fn (array $entry): bool => is_string($entry['key'] ?? null)
+                && is_string($entry['label'] ?? null)
+                && is_string($entry['text'] ?? null)
+                && $entry['key'] !== ''
+                && $entry['label'] !== ''
+                && $entry['text'] !== '',
+        ));
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -77,6 +96,7 @@ final class Form extends Model
             'schema' => 'array',
             'schema_version' => 'integer',
             'required_consents' => 'array',
+            'custom_consents' => 'array',
         ];
     }
 }

@@ -20,12 +20,17 @@ test('FieldType::label() covers every case', function (FieldType $type, string $
     'textarea' => [FieldType::Textarea, 'Long text'],
     'number' => [FieldType::Number, 'Number'],
     'date' => [FieldType::Date, 'Date'],
-    'select' => [FieldType::Select, 'Choice'],
-    'checkbox' => [FieldType::Checkbox, 'Checkbox'],
+    'select' => [FieldType::Select, 'Dropdown'],
+    'checkboxes' => [FieldType::Checkboxes, 'Checkboxes'],
+    'toggle' => [FieldType::Toggle, 'Toggle'],
+    'email' => [FieldType::Email, 'Email'],
+    'name' => [FieldType::Name, 'Name'],
+    'phone' => [FieldType::Phone, 'Phone'],
 ]);
 
-test('FieldType::requiresOptions() is true only for select', function () {
+test('FieldType::requiresOptions() is true for option-bearing types only', function () {
     expect(FieldType::Select->requiresOptions())->toBeTrue()
+        ->and(FieldType::Checkboxes->requiresOptions())->toBeTrue()
         ->and(FieldType::Text->requiresOptions())->toBeFalse()
-        ->and(FieldType::Checkbox->requiresOptions())->toBeFalse();
+        ->and(FieldType::Date->requiresOptions())->toBeFalse();
 });

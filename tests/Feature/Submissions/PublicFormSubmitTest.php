@@ -19,7 +19,6 @@ function publishedFormFor(Organization $org, int $version = 1): Form
                 ['key' => 'dob', 'label' => 'Date of birth', 'type' => FieldType::Date->value, 'required' => true],
                 ['key' => 'jersey_size', 'label' => 'Jersey size', 'type' => FieldType::Select->value, 'required' => true, 'options' => ['YS', 'YM', 'YL']],
                 ['key' => 'allergies', 'label' => 'Allergies', 'type' => FieldType::Textarea->value, 'required' => false],
-                ['key' => 'media_release', 'label' => 'Photo consent', 'type' => FieldType::Checkbox->value, 'required' => false],
             ],
         ],
         'schema_version' => $version,
@@ -38,7 +37,7 @@ test('public form show renders for a published form', function () {
         ->assertInertia(fn ($page) => $page
             ->component('forms/Respond')
             ->where('form.id', $form->id)
-            ->has('form.schema.fields', 6)
+            ->has('form.schema.fields', 5)
         );
 });
 
@@ -126,6 +125,174 @@ test('public submission rejects invalid select option', function () {
             ],
         ])
         ->assertSessionHasErrors('data.jersey_size');
+});
+
+test('public submission accepts and stores checkboxes values within the allowed options', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'title' => 'Activities sign-up',
+        'schema' => [
+            'fields' => [
+                ['key' => 'name', 'label' => 'Name', 'type' => FieldType::Text->value, 'required' => true],
+                ['key' => 'activities', 'label' => 'Activities', 'type' => FieldType::Checkboxes->value, 'required' => true, 'options' => ['Soccer', 'Basketball', 'Swim']],
+            ],
+        ],
+    ]);
+
+    $this->post(route('public-forms.submit', $form->id), [
+        'data' => [
+            'name' => 'Sky',
+            'activities' => ['Soccer', 'Swim'],
+        ],
+    ])->assertRedirect(route('public-forms.thanks', $form->id));
+
+    expect(Submission::query()->withoutGlobalScopes()->where('form_id', $form->id)->first()?->data['activities'])
+        ->toEqual(['Soccer', 'Swim']);
+});
+
+test('public form show includes custom consents in the payload', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'custom_consents' => [
+            ['key' => 'parking', 'label' => 'Parking lot rules', 'text' => 'I will not park in the bus loop.'],
+        ],
+    ]);
+
+    $this->get(route('public-forms.show', $form->id))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('forms/Respond')
+            ->where('form.consents.0.key', 'parking')
+            ->where('form.consents.0.label', 'Parking lot rules')
+            ->where('form.consents.0.type', 'custom')
+        );
+});
+
+test('public submission requires acceptance of custom consents', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => ['fields' => [['key' => 'name', 'label' => 'Name', 'type' => 'name', 'required' => true]]],
+        'custom_consents' => [
+            ['key' => 'parking', 'label' => 'Parking rules', 'text' => 'I agree.'],
+        ],
+    ]);
+
+    $this->from(route('public-forms.show', $form->id))
+        ->post(route('public-forms.submit', $form->id), [
+            'data' => ['name' => 'Sky'],
+            'consents' => ['parking' => false],
+        ])
+        ->assertSessionHasErrors('consents.parking');
+});
+
+test('accepted custom consent creates a Consent record with the form-defined label', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => ['fields' => [['key' => 'name', 'label' => 'Name', 'type' => 'name', 'required' => true]]],
+        'custom_consents' => [
+            ['key' => 'parking', 'label' => 'Parking rules', 'text' => 'I will not park in the bus loop.'],
+        ],
+    ]);
+
+    $this->post(route('public-forms.submit', $form->id), [
+        'data' => ['name' => 'Sky'],
+        'consents' => ['parking' => true],
+    ])->assertRedirect(route('public-forms.thanks', $form->id));
+
+    $consent = App\Models\Consent::query()->withoutGlobalScopes()->where('form_id', null)->first()
+        ?? App\Models\Consent::query()->withoutGlobalScopes()->latest('id')->first();
+
+    expect($consent?->consent_type)->toBe(App\Enums\ConsentType::Custom)
+        ->and($consent?->consent_label)->toBe('Parking rules')
+        ->and($consent?->consent_text_snapshot)->toBe('I will not park in the bus loop.');
+});
+
+test('public submission accepts a toggle as a boolean', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'opt_in', 'label' => 'Receive updates', 'type' => FieldType::Toggle->value, 'required' => false],
+            ],
+        ],
+    ]);
+
+    $this->post(route('public-forms.submit', $form->id), [
+        'data' => ['opt_in' => true],
+    ])->assertRedirect(route('public-forms.thanks', $form->id));
+});
+
+test('public submission rejects a non-boolean toggle value', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'opt_in', 'label' => 'Receive updates', 'type' => FieldType::Toggle->value, 'required' => false],
+            ],
+        ],
+    ]);
+
+    $this->from(route('public-forms.show', $form->id))
+        ->post(route('public-forms.submit', $form->id), [
+            'data' => ['opt_in' => 'definitely'],
+        ])
+        ->assertSessionHasErrors('data.opt_in');
+});
+
+test('public submission accepts a phone formatted as NNN-NNN-NNNN', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'phone', 'label' => 'Phone', 'type' => FieldType::Phone->value, 'required' => true],
+            ],
+        ],
+    ]);
+
+    $this->post(route('public-forms.submit', $form->id), [
+        'data' => ['phone' => '555-123-4567'],
+    ])->assertRedirect(route('public-forms.thanks', $form->id));
+});
+
+test('public submission rejects a phone in any other format', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'phone', 'label' => 'Phone', 'type' => FieldType::Phone->value, 'required' => true],
+            ],
+        ],
+    ]);
+
+    $this->from(route('public-forms.show', $form->id))
+        ->post(route('public-forms.submit', $form->id), [
+            'data' => ['phone' => '(555) 123-4567'],
+        ])
+        ->assertSessionHasErrors('data.phone');
+});
+
+test('public submission rejects an invalid email field value', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'contact', 'label' => 'Email', 'type' => FieldType::Email->value, 'required' => true],
+            ],
+        ],
+    ]);
+
+    $this->from(route('public-forms.show', $form->id))
+        ->post(route('public-forms.submit', $form->id), [
+            'data' => ['contact' => 'not-an-email'],
+        ])
+        ->assertSessionHasErrors('data.contact');
+});
+
+test('public submission rejects checkboxes values not in the allowed options', function () {
+    $form = Form::factory()->for($this->org)->published()->create([
+        'schema' => [
+            'fields' => [
+                ['key' => 'activities', 'label' => 'Activities', 'type' => FieldType::Checkboxes->value, 'required' => true, 'options' => ['Soccer', 'Basketball']],
+            ],
+        ],
+    ]);
+
+    $this->from(route('public-forms.show', $form->id))
+        ->post(route('public-forms.submit', $form->id), [
+            'data' => ['activities' => ['Soccer', 'Lacrosse']],
+        ])
+        ->assertSessionHasErrors('data.activities.1');
 });
 
 test('public submission rejects malformed date', function () {

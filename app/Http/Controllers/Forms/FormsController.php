@@ -34,6 +34,45 @@ final class FormsController extends Controller
         ]);
     }
 
+    public function preview(Form $form, ConsentTextRegistry $consents): Response
+    {
+        $this->authorize('update', $form);
+
+        $presetConsents = array_map(
+            fn (ConsentType $type): array => [
+                'type' => $type->value,
+                'key' => $type->value,
+                'label' => $type->label(),
+                'text' => $consents->entry($type)['text'],
+                'version' => $consents->entry($type)['version'],
+            ],
+            $form->requiredConsentTypes(),
+        );
+
+        $customConsents = array_map(
+            fn (array $entry): array => [
+                'type' => ConsentType::Custom->value,
+                'key' => $entry['key'],
+                'label' => $entry['label'],
+                'text' => $entry['text'],
+                'version' => 1,
+            ],
+            $form->customConsents(),
+        );
+
+        return Inertia::render('forms/Respond', [
+            'form' => [
+                'id' => $form->id,
+                'title' => $form->title,
+                'description' => $form->description,
+                'schema' => $form->schema,
+                'schema_version' => $form->schema_version,
+                'consents' => array_merge($presetConsents, $customConsents),
+            ],
+            'preview' => true,
+        ]);
+    }
+
     public function edit(Request $request, Form $form, ConsentTextRegistry $consents): Response
     {
         $this->authorize('update', $form);
@@ -53,7 +92,7 @@ final class FormsController extends Controller
                 'label' => $type->label(),
                 'text' => $consents->entry($type)['text'],
             ],
-            ConsentType::cases(),
+            ConsentType::presets(),
         );
 
         return Inertia::render('forms/Edit', [
@@ -90,6 +129,8 @@ final class FormsController extends Controller
         $validated = $request->validated();
         /** @var array<int, string>|null $requiredConsents */
         $requiredConsents = $validated['required_consents'] ?? null;
+        /** @var array<int, array{key: string, label: string, text: string}>|null $customConsents */
+        $customConsents = $validated['custom_consents'] ?? null;
 
         $form->update([
             'title' => $request->string('title')->toString(),
@@ -99,6 +140,7 @@ final class FormsController extends Controller
                 ? $form->schema_version + 1
                 : $form->schema_version,
             'required_consents' => $requiredConsents === null || $requiredConsents === [] ? null : array_values($requiredConsents),
+            'custom_consents' => $customConsents === null || $customConsents === [] ? null : array_values($customConsents),
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Form updated.')]);

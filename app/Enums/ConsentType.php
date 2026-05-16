@@ -10,6 +10,20 @@ enum ConsentType: string
     case MediaRelease = 'media_release';
     case MedicalTreatment = 'medical_treatment';
     case CodeOfConduct = 'code_of_conduct';
+    case Custom = 'custom';
+
+    /**
+     * @return array<int, self>
+     */
+    public static function presets(): array
+    {
+        return [
+            self::Registration,
+            self::MediaRelease,
+            self::MedicalTreatment,
+            self::CodeOfConduct,
+        ];
+    }
 
     public function label(): string
     {
@@ -18,6 +32,7 @@ enum ConsentType: string
             self::MediaRelease => 'Media release',
             self::MedicalTreatment => 'Medical treatment authorization',
             self::CodeOfConduct => 'Code of conduct',
+            self::Custom => 'Custom consent',
         };
     }
 }

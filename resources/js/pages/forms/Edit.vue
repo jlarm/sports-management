@@ -2,16 +2,24 @@
 import { Head, Link, setLayoutProps, useForm } from '@inertiajs/vue3';
 import {
     AlignLeft,
+    AtSign,
     Calendar,
-    CheckSquare,
-    GripVertical,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Eye,
     Hash,
     List,
+    ListChecks,
+    Phone,
     Plus,
+    Search,
+    Settings2,
+    ToggleRight,
     Trash2,
     Type,
-    type LucideIcon,
+    User,
 } from 'lucide-vue-next';
+import type { LucideIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import draggable from 'vuedraggable';
 import Heading from '@/components/Heading.vue';
@@ -20,7 +28,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { index as formsIndex, edit as formEdit, update as formUpdate } from '@/routes/forms';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    edit as formEdit,
+    index as formsIndex,
+    preview as formPreview,
+    update as formUpdate,
+} from '@/routes/forms';
 
 type FieldTypeValue =
     | 'text'
@@ -28,7 +43,11 @@ type FieldTypeValue =
     | 'number'
     | 'date'
     | 'select'
-    | 'checkbox';
+    | 'checkboxes'
+    | 'toggle'
+    | 'email'
+    | 'name'
+    | 'phone';
 
 type FieldShape = {
     key: string;
@@ -39,7 +58,7 @@ type FieldShape = {
     options?: string[];
 };
 
-type DraggableField = FieldShape & { _uid: number };
+type DraggableField = FieldShape & { _uid: number; _originalKey: string };
 
 type FormShape = {
     id: number;
@@ -50,6 +69,7 @@ type FormShape = {
     schema: { fields: FieldShape[] };
     schema_version: number;
     required_consents: string[];
+    custom_consents: Array<{ key: string; label: string; text: string }>;
 };
 
 type FieldTypeOption = {
@@ -83,24 +103,41 @@ const fieldTypeIcons: Record<FieldTypeValue, LucideIcon> = {
     number: Hash,
     date: Calendar,
     select: List,
-    checkbox: CheckSquare,
+    checkboxes: ListChecks,
+    toggle: ToggleRight,
+    email: AtSign,
+    name: User,
+    phone: Phone,
 };
 
-const fieldTypeDescriptions: Record<FieldTypeValue, string> = {
-    text: 'Single-line input',
-    textarea: 'Multi-line input',
-    number: 'Numeric value',
-    date: 'Date picker',
-    select: 'Choice from a list',
-    checkbox: 'Yes / no toggle',
+type Category = {
+    name: string;
+    types: FieldTypeValue[];
 };
+
+const categories: Category[] = [
+    { name: 'Text', types: ['textarea', 'text'] },
+    { name: 'Choice', types: ['select', 'checkboxes', 'toggle'] },
+    { name: 'Contact Info', types: ['email', 'name', 'phone'] },
+    { name: 'Number', types: ['number'] },
+    { name: 'Date and Time', types: ['date'] },
+];
 
 let nextUid = 0;
 
 function makeUid(): number {
     nextUid += 1;
+
     return nextUid;
 }
+
+type DraggableCustomConsent = {
+    _uid: number;
+    _originalKey: string;
+    key: string;
+    label: string;
+    text: string;
+};
 
 const builder = useForm({
     title: props.form.title,
@@ -108,6 +145,7 @@ const builder = useForm({
     schema: {
         fields: props.form.schema.fields.map((field) => ({
             _uid: makeUid(),
+            _originalKey: field.key,
             key: field.key,
             label: field.label,
             type: field.type,
@@ -117,9 +155,50 @@ const builder = useForm({
         })) as DraggableField[],
     },
     required_consents: [...props.form.required_consents],
+    custom_consents: props.form.custom_consents.map((entry) => ({
+        _uid: makeUid(),
+        _originalKey: entry.key,
+        key: entry.key,
+        label: entry.label,
+        text: entry.text,
+    })) as DraggableCustomConsent[],
 });
 
+function addCustomConsent() {
+    if (readOnly.value) {
+        return;
+    }
+
+    builder.custom_consents.push({
+        _uid: makeUid(),
+        _originalKey: '',
+        key: '',
+        label: '',
+        text: '',
+    });
+}
+
+function removeCustomConsent(uid: number) {
+    const index = builder.custom_consents.findIndex((c) => c._uid === uid);
+
+    if (index !== -1) {
+        builder.custom_consents.splice(index, 1);
+    }
+}
+
+function customConsentError(
+    index: number,
+    attr: 'key' | 'label' | 'text',
+): string | undefined {
+    const errors = builder.errors as Record<string, string | undefined>;
+
+    return errors[`custom_consents.${index}.${attr}`];
+}
+
 const readOnly = computed(() => props.form.status === 'closed');
+const search = ref('');
+const selectedUid = ref<number | null>(null);
+const sectionCollapsed = ref(false);
 
 function fieldTypeRequiresOptions(type: string): boolean {
     return (
@@ -128,11 +207,39 @@ function fieldTypeRequiresOptions(type: string): boolean {
     );
 }
 
+function fieldTypeLabel(type: FieldTypeValue): string {
+    return (
+        props.fieldTypeOptions.find((option) => option.value === type)?.label ?? type
+    );
+}
+
+function previewInputType(type: FieldTypeValue): string {
+    switch (type) {
+        case 'number':
+            return 'number';
+        case 'date':
+            return 'date';
+        case 'email':
+            return 'email';
+        case 'phone':
+            return 'tel';
+        default:
+            return 'text';
+    }
+}
+
+const defaultLabels: Partial<Record<FieldTypeValue, string>> = {
+    email: 'Email',
+    name: 'Name',
+    phone: 'Phone',
+};
+
 function blankFieldOfType(type: FieldTypeValue): DraggableField {
     return {
         _uid: makeUid(),
+        _originalKey: '',
         key: '',
-        label: '',
+        label: defaultLabels[type] ?? '',
         type,
         required: false,
         placeholder: '',
@@ -140,39 +247,140 @@ function blankFieldOfType(type: FieldTypeValue): DraggableField {
     };
 }
 
+function slugifyKey(label: string): string {
+    const slug = label
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+    if (slug === '') {
+        return 'field';
+    }
+
+    return /^[a-z]/.test(slug) ? slug : `field_${slug}`;
+}
+
 function appendField(type: FieldTypeValue) {
-    if (readOnly.value) return;
-    builder.schema.fields.push(blankFieldOfType(type));
+    if (readOnly.value) {
+        return;
+    }
+
+    const field = blankFieldOfType(type);
+    builder.schema.fields.push(field);
+    selectedUid.value = field._uid;
 }
 
 function cloneFromPalette(item: FieldTypeOption): DraggableField {
     return blankFieldOfType(item.value);
 }
 
-function removeField(index: number) {
+function removeField(uid: number) {
+    const index = builder.schema.fields.findIndex((f) => f._uid === uid);
+
+    if (index === -1) {
+        return;
+    }
+
     builder.schema.fields.splice(index, 1);
+
+    if (selectedUid.value === uid) {
+        selectedUid.value = null;
+    }
 }
+
+function paletteOptionsFor(category: Category): FieldTypeOption[] {
+    const query = search.value.trim().toLowerCase();
+
+    return props.fieldTypeOptions.filter((option) => {
+        if (! category.types.includes(option.value)) {
+            return false;
+        }
+
+        if (query === '') {
+            return true;
+        }
+
+        return option.label.toLowerCase().includes(query);
+    });
+}
+
+const visibleCategories = computed(() =>
+    categories.filter((category) => paletteOptionsFor(category).length > 0),
+);
+
+const selectedField = computed<DraggableField | null>(() => {
+    if (selectedUid.value === null) {
+        return null;
+    }
+
+    return (
+        builder.schema.fields.find((field) => field._uid === selectedUid.value) ??
+        null
+    );
+});
+
+const selectedFieldIndex = computed(() =>
+    selectedUid.value === null
+        ? -1
+        : builder.schema.fields.findIndex(
+              (field) => field._uid === selectedUid.value,
+          ),
+);
 
 const newOption = ref<Record<number, string>>({});
 
-function addOption(field: DraggableField) {
+function addOption() {
+    const index = selectedFieldIndex.value;
+
+    if (index < 0) {
+        return;
+    }
+
+    const field = builder.schema.fields[index];
     const value = (newOption.value[field._uid] ?? '').trim();
-    if (value === '') return;
+
+    if (value === '') {
+        return;
+    }
+
     field.options = [...(field.options ?? []), value];
     newOption.value[field._uid] = '';
 }
 
-function removeOption(field: DraggableField, optionIndex: number) {
-    field.options = field.options?.filter((_, i) => i !== optionIndex);
+function removeOption(optionIndex: number) {
+    const index = selectedFieldIndex.value;
+
+    if (index < 0) {
+        return;
+    }
+
+    const field = builder.schema.fields[index];
+    field.options = (field.options ?? []).filter((_, i) => i !== optionIndex);
+}
+
+function selectField(uid: number) {
+    selectedUid.value = uid;
 }
 
 function submit() {
-    builder.transform((data) => ({
-        ...data,
-        schema: {
-            fields: data.schema.fields.map((field) => {
+    builder
+        .transform((data) => {
+            const usedKeys = new Set<string>();
+
+            const fields = data.schema.fields.map((field) => {
+                let key = field._originalKey || slugifyKey(field.label);
+                const base = key;
+                let suffix = 2;
+
+                while (usedKeys.has(key)) {
+                    key = `${base}_${suffix}`;
+                    suffix += 1;
+                }
+                usedKeys.add(key);
+
                 const payload: Record<string, unknown> = {
-                    key: field.key,
+                    key,
                     label: field.label,
                     type: field.type,
                     required: field.required,
@@ -184,14 +392,44 @@ function submit() {
                 }
 
                 return payload;
-            }),
-        },
-    })).patch(formUpdate(props.form.id));
+            });
+
+            const usedConsentKeys = new Set<string>();
+            const customConsents = data.custom_consents.map((entry) => {
+                let key = entry._originalKey || slugifyKey(entry.label);
+                const base = key;
+                let suffix = 2;
+
+                while (usedConsentKeys.has(key)) {
+                    key = `${base}_${suffix}`;
+                    suffix += 1;
+                }
+                usedConsentKeys.add(key);
+
+                return {
+                    key,
+                    label: entry.label,
+                    text: entry.text,
+                };
+            });
+
+            return {
+                ...data,
+                schema: { fields },
+                custom_consents: customConsents,
+            };
+        })
+        .patch(formUpdate(props.form.id));
 }
 
 function fieldError(index: number, attr: string): string | undefined {
+    if (index < 0) {
+        return undefined;
+    }
+
     const key = `schema.fields.${index}.${attr}`;
     const errors = builder.errors as Record<string, string | undefined>;
+
     return errors[key];
 }
 </script>
@@ -199,127 +437,157 @@ function fieldError(index: number, attr: string): string | undefined {
 <template>
     <Head :title="`Edit ${form.title}`" />
 
-    <div class="flex flex-col space-y-6 px-4 py-6 md:px-6">
-        <div
-            class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+    <div class="flex h-[calc(100svh-3.5rem)] flex-col">
+        <header
+            class="flex items-center justify-between border-b bg-card px-4 py-2.5 md:px-6"
         >
             <Heading
                 variant="small"
                 :title="`Edit ${form.title}`"
-                :description="`Schema version ${form.schema_version}.`"
+                :description="`Schema version ${form.schema_version}`"
             />
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
                 <Badge>{{ form.status_label }}</Badge>
-                <Button as-child variant="ghost">
-                    <Link :href="formsIndex()">Back to forms</Link>
+                <Button as-child variant="ghost" size="sm">
+                    <Link :href="formsIndex()">Cancel</Link>
+                </Button>
+                <Button as-child variant="outline" size="sm">
+                    <a
+                        :href="formPreview(form.id).url"
+                        target="_blank"
+                        rel="noopener"
+                        data-test="preview-link"
+                    >
+                        <Eye class="mr-1.5 size-4" />
+                        Preview
+                    </a>
+                </Button>
+                <Button
+                    type="button"
+                    size="sm"
+                    :disabled="builder.processing || readOnly"
+                    @click="submit"
+                >
+                    Save changes
                 </Button>
             </div>
-        </div>
+        </header>
 
         <div
             v-if="readOnly"
-            class="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-300"
+            class="border-b border-yellow-500/50 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-700 md:px-6 dark:text-yellow-300"
         >
             This form is closed. Reopen it from the list to edit again.
         </div>
 
-        <form class="space-y-6" @submit.prevent="submit">
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div class="grid gap-2">
-                    <Label for="title">Title</Label>
-                    <Input
-                        id="title"
-                        v-model="builder.title"
-                        required
-                        :disabled="readOnly"
-                    />
-                    <InputError :message="builder.errors.title" />
+        <div
+            class="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[18rem_1fr_22rem]"
+        >
+            <aside
+                class="hidden flex-col overflow-y-auto border-r bg-muted/20 lg:flex"
+            >
+                <div class="border-b p-4">
+                    <div class="relative">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                            v-model="search"
+                            placeholder="Search Field Types..."
+                            class="pl-9"
+                        />
+                    </div>
                 </div>
-                <div class="grid gap-2">
-                    <Label for="description">Description</Label>
-                    <Input
-                        id="description"
-                        v-model="builder.description"
-                        :disabled="readOnly"
-                        placeholder="Visible to people filling out the form"
-                    />
-                    <InputError :message="builder.errors.description" />
-                </div>
-            </div>
 
-            <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
-                <aside class="space-y-3">
-                    <h2 class="text-sm font-semibold uppercase text-muted-foreground">
-                        Add element
-                    </h2>
-                    <draggable
-                        :model-value="fieldTypeOptions"
-                        :group="{ name: 'fields', pull: 'clone', put: false }"
-                        :sort="false"
-                        :clone="cloneFromPalette"
-                        item-key="value"
-                        :disabled="readOnly"
-                        :animation="150"
-                        ghost-class="opacity-40"
-                        tag="ul"
-                        class="space-y-2"
+                <div class="flex-1 space-y-6 overflow-y-auto p-4">
+                    <div
+                        v-for="category in visibleCategories"
+                        :key="category.name"
                     >
-                        <template #item="{ element: option }">
-                            <li
-                                class="flex cursor-grab items-center justify-between rounded-lg border bg-card p-3 text-sm shadow-sm hover:border-primary active:cursor-grabbing"
-                                :data-test="`palette-${option.value}`"
-                            >
-                                <span class="flex items-center gap-3">
-                                    <span
-                                        class="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground"
-                                    >
-                                        <component
-                                            :is="fieldTypeIcons[option.value]"
-                                            class="size-4"
-                                        />
-                                    </span>
-                                    <span>
-                                        <span class="block font-medium">
-                                            {{ option.label }}
-                                        </span>
-                                        <span
-                                            class="block text-xs text-muted-foreground"
-                                        >
-                                            {{ fieldTypeDescriptions[option.value] }}
-                                        </span>
-                                    </span>
-                                </span>
+                        <h3
+                            class="mb-2 text-xs font-medium text-muted-foreground"
+                        >
+                            {{ category.name }}
+                        </h3>
+                        <draggable
+                            :model-value="paletteOptionsFor(category)"
+                            :group="{
+                                name: 'fields',
+                                pull: 'clone',
+                                put: false,
+                            }"
+                            :sort="false"
+                            :clone="cloneFromPalette"
+                            item-key="value"
+                            :disabled="readOnly"
+                            :animation="0"
+                            :revert-clone="false"
+                            ghost-class="opacity-0"
+                            drag-class="cursor-grabbing"
+                            tag="div"
+                            class="grid grid-cols-2 gap-2"
+                        >
+                            <template #item="{ element: option }">
                                 <button
                                     type="button"
-                                    class="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="flex cursor-grab items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm shadow-xs transition hover:border-primary hover:shadow-sm active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="readOnly"
-                                    :aria-label="`Add ${option.label}`"
+                                    :data-test="`palette-${option.value}`"
                                     @click="appendField(option.value)"
                                 >
-                                    <Plus class="size-4" />
+                                    <component
+                                        :is="fieldTypeIcons[option.value]"
+                                        class="size-4 text-muted-foreground"
+                                    />
+                                    <span class="truncate">{{
+                                        option.label
+                                    }}</span>
                                 </button>
-                            </li>
-                        </template>
-                    </draggable>
-                    <p class="text-xs text-muted-foreground">
-                        Drag elements onto the canvas, or click the
-                        <Plus class="inline size-3 align-text-bottom" />
-                        to append.
-                    </p>
-                </aside>
-
-                <section class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-sm font-semibold uppercase text-muted-foreground">
-                            Form fields
-                        </h2>
-                        <span class="text-xs text-muted-foreground">
-                            {{ builder.schema.fields.length }} field<span
-                                v-if="builder.schema.fields.length !== 1"
-                                >s</span
-                            >
-                        </span>
+                            </template>
+                        </draggable>
                     </div>
+
+                    <p
+                        v-if="visibleCategories.length === 0"
+                        class="text-sm text-muted-foreground"
+                    >
+                        No field types match "{{ search }}".
+                    </p>
+                </div>
+            </aside>
+
+            <main
+                class="overflow-y-auto bg-muted/10 px-4 py-8 md:px-8"
+                @click="selectedUid = null"
+            >
+                <div class="mx-auto max-w-3xl space-y-6" @click.stop>
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="inline-block size-2 rounded-full"
+                            :class="
+                                form.status === 'published'
+                                    ? 'bg-emerald-500'
+                                    : form.status === 'draft'
+                                      ? 'bg-amber-500'
+                                      : 'bg-muted-foreground'
+                            "
+                        />
+                        <input
+                            v-model="builder.title"
+                            class="flex-1 border-none bg-transparent text-2xl font-medium focus:outline-none focus:ring-0"
+                            :disabled="readOnly"
+                            placeholder="Untitled form"
+                        />
+                    </div>
+                    <InputError :message="builder.errors.title" />
+
+                    <input
+                        v-model="builder.description"
+                        class="w-full border-none bg-transparent text-sm text-muted-foreground focus:outline-none focus:ring-0"
+                        :disabled="readOnly"
+                        placeholder="Add a description visible to respondents"
+                    />
+
                     <p
                         v-if="builder.errors.schema"
                         class="text-sm text-destructive"
@@ -327,229 +595,487 @@ function fieldError(index: number, attr: string): string | undefined {
                         {{ builder.errors.schema }}
                     </p>
 
-                    <draggable
-                        v-model="builder.schema.fields"
-                        :group="{ name: 'fields' }"
-                        item-key="_uid"
-                        handle=".drag-handle"
-                        :disabled="readOnly"
-                        :animation="150"
-                        ghost-class="opacity-50"
-                        tag="ul"
-                        class="min-h-[14rem] space-y-4 rounded-lg border-2 border-dashed border-muted-foreground/30 p-4"
-                    >
-                        <template #header>
-                            <li
-                                v-if="builder.schema.fields.length === 0"
-                                class="flex h-32 select-none items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground"
+                    <div class="rounded-xl border bg-card p-6 shadow-sm">
+                        <div
+                            class="mb-4 flex items-center justify-between text-sm text-muted-foreground"
+                        >
+                            <span>Section</span>
+                            <button
+                                type="button"
+                                class="rounded p-1 hover:bg-muted hover:text-foreground"
+                                :aria-label="
+                                    sectionCollapsed
+                                        ? 'Expand section'
+                                        : 'Collapse section'
+                                "
+                                @click="sectionCollapsed = !sectionCollapsed"
                             >
-                                Drag a field type from the left or click
-                                <Plus class="mx-1 inline size-3 align-text-bottom" />
-                                to add one.
-                            </li>
-                        </template>
-                        <template #item="{ element: field, index }">
-                            <li
-                                class="space-y-3 rounded-lg border bg-card p-4 shadow-sm"
-                                :data-test="`field-row-${index}`"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            class="drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 active:cursor-grabbing"
-                                            :disabled="readOnly"
-                                            :aria-label="`Drag field ${index + 1}`"
-                                        >
-                                            <GripVertical class="size-4" />
-                                        </button>
-                                        <span class="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <component
-                                                :is="fieldTypeIcons[field.type]"
-                                                class="size-3.5"
-                                            />
-                                            <span>#{{ index + 1 }}</span>
-                                        </span>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        class="text-destructive"
-                                        :disabled="readOnly"
-                                        @click="removeField(index)"
-                                    >
-                                        <Trash2 class="size-4" />
-                                    </Button>
-                                </div>
+                                <component
+                                    :is="
+                                        sectionCollapsed
+                                            ? ChevronsUpDown
+                                            : ChevronsDownUp
+                                    "
+                                    class="size-4"
+                                />
+                            </button>
+                        </div>
 
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div class="grid gap-2">
-                                        <Label :for="`field-key-${field._uid}`">
-                                            Key
-                                        </Label>
-                                        <Input
-                                            :id="`field-key-${field._uid}`"
-                                            v-model="field.key"
-                                            placeholder="first_name"
+                        <draggable
+                            v-show="!sectionCollapsed"
+                            v-model="builder.schema.fields"
+                            :group="{ name: 'fields' }"
+                            item-key="_uid"
+                            :disabled="readOnly"
+                            :animation="150"
+                            ghost-class="opacity-50"
+                            tag="div"
+                            class="min-h-[8rem] space-y-2"
+                        >
+                            <template #header>
+                                <div
+                                    v-if="builder.schema.fields.length === 0"
+                                    class="rounded-md border border-dashed py-12 text-center text-sm text-muted-foreground"
+                                >
+                                    Drag a field type from the left, or click
+                                    one to add it here.
+                                </div>
+                            </template>
+                            <template #item="{ element: field, index }">
+                                <div
+                                    class="group cursor-pointer rounded-lg border border-transparent p-4 transition hover:border-muted-foreground/30"
+                                    :class="{
+                                        'border-primary bg-primary/5 ring-2 ring-primary/20 hover:border-primary':
+                                            selectedUid === field._uid,
+                                    }"
+                                    :data-test="`field-row-${index}`"
+                                    @click.stop="selectField(field._uid)"
+                                >
+                                    <div
+                                        class="mb-1.5 flex items-start justify-between gap-3"
+                                    >
+                                        <div class="min-w-0 flex-1">
+                                            <Label
+                                                class="text-sm font-medium"
+                                            >
+                                                {{
+                                                    field.label ||
+                                                    fieldTypeLabel(field.type)
+                                                }}
+                                                <span
+                                                    v-if="field.required"
+                                                    class="text-destructive"
+                                                    >*</span
+                                                >
+                                            </Label>
+                                        </div>
+                                        <button
+                                            v-show="
+                                                selectedUid === field._uid
+                                            "
+                                            type="button"
+                                            class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
                                             :disabled="readOnly"
-                                        />
-                                        <InputError :message="fieldError(index, 'key')" />
+                                            :aria-label="`Delete ${field.label || 'field'}`"
+                                            @click.stop="removeField(field._uid)"
+                                        >
+                                            <Trash2 class="size-4" />
+                                        </button>
                                     </div>
-                                    <div class="grid gap-2">
-                                        <Label :for="`field-label-${field._uid}`">
+
+                                    <template v-if="field.type === 'textarea'">
+                                        <textarea
+                                            disabled
+                                            rows="3"
+                                            class="pointer-events-none mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                            :placeholder="
+                                                field.placeholder ||
+                                                'Long answer text'
+                                            "
+                                        />
+                                    </template>
+                                    <template
+                                        v-else-if="field.type === 'select'"
+                                    >
+                                        <select
+                                            disabled
+                                            class="pointer-events-none mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option>
+                                                {{
+                                                    field.placeholder ||
+                                                    'Choose an option'
+                                                }}
+                                            </option>
+                                            <option
+                                                v-for="opt in field.options"
+                                                :key="opt"
+                                            >
+                                                {{ opt }}
+                                            </option>
+                                        </select>
+                                    </template>
+                                    <template
+                                        v-else-if="field.type === 'toggle'"
+                                    >
+                                        <div
+                                            class="pointer-events-none mt-2 flex items-center gap-2 text-sm text-muted-foreground"
+                                        >
+                                            <Switch :model-value="false" />
+                                            <span>{{
+                                                field.placeholder ||
+                                                field.label ||
+                                                'Off'
+                                            }}</span>
+                                        </div>
+                                    </template>
+                                    <template
+                                        v-else-if="field.type === 'checkboxes'"
+                                    >
+                                        <div
+                                            v-if="(field.options ?? []).length > 0"
+                                            class="pointer-events-none mt-2 space-y-1.5"
+                                        >
+                                            <label
+                                                v-for="opt in field.options"
+                                                :key="opt"
+                                                class="flex items-center gap-2 text-sm text-muted-foreground"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    disabled
+                                                    class="size-4 rounded border-input"
+                                                />
+                                                <span>{{ opt }}</span>
+                                            </label>
+                                        </div>
+                                        <p
+                                            v-else
+                                            class="pointer-events-none mt-2 text-sm italic text-muted-foreground"
+                                        >
+                                            Add options in the panel on the right.
+                                        </p>
+                                    </template>
+                                    <template v-else>
+                                        <input
+                                            disabled
+                                            :type="previewInputType(field.type)"
+                                            class="pointer-events-none mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                            :placeholder="
+                                                field.placeholder ||
+                                                fieldTypeLabel(field.type)
+                                            "
+                                        />
+                                    </template>
+                                </div>
+                            </template>
+                        </draggable>
+                    </div>
+
+                    <section
+                        class="space-y-4 rounded-xl border bg-card p-6 shadow-sm"
+                        data-test="required-consents-picker"
+                    >
+                        <div>
+                            <h2 class="text-sm font-semibold">
+                                Required parental consents
+                            </h2>
+                            <p class="text-xs text-muted-foreground">
+                                Public respondents will see these as required
+                                checkboxes. The text shown at submission time is
+                                snapshotted on each consent record.
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <label
+                                v-for="option in consentOptions"
+                                :key="option.value"
+                                class="flex items-start gap-3 rounded-md border p-3 text-sm"
+                            >
+                                <input
+                                    v-model="builder.required_consents"
+                                    type="checkbox"
+                                    :value="option.value"
+                                    :disabled="readOnly"
+                                    class="mt-1 h-4 w-4 rounded border-input"
+                                    :data-test="`consent-toggle-${option.value}`"
+                                />
+                                <span class="flex-1 space-y-1">
+                                    <span class="block font-medium">{{
+                                        option.label
+                                    }}</span>
+                                    <span
+                                        class="block text-xs text-muted-foreground"
+                                    >
+                                        {{ option.text }}
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="space-y-3 border-t pt-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold">
+                                    Custom consents
+                                </h3>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    :disabled="readOnly"
+                                    data-test="add-custom-consent"
+                                    @click="addCustomConsent"
+                                >
+                                    <Plus class="mr-1 size-4" />
+                                    Add custom
+                                </Button>
+                            </div>
+
+                            <div
+                                v-if="builder.custom_consents.length === 0"
+                                class="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground"
+                            >
+                                No custom consents yet. Add one to ask for
+                                form-specific acknowledgements.
+                            </div>
+
+                            <div
+                                v-for="(
+                                    consent, consentIndex
+                                ) in builder.custom_consents"
+                                :key="consent._uid"
+                                class="space-y-3 rounded-md border p-3"
+                                :data-test="`custom-consent-${consentIndex}`"
+                            >
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex-1 space-y-1.5">
+                                        <Label
+                                            :for="`custom-consent-label-${consent._uid}`"
+                                            class="text-xs"
+                                        >
                                             Label
                                         </Label>
                                         <Input
-                                            :id="`field-label-${field._uid}`"
-                                            v-model="field.label"
-                                            placeholder="First name"
+                                            :id="`custom-consent-label-${consent._uid}`"
+                                            v-model="consent.label"
+                                            placeholder="e.g. Parking lot rules"
                                             :disabled="readOnly"
                                         />
                                         <InputError
-                                            :message="fieldError(index, 'label')"
+                                            :message="
+                                                customConsentError(
+                                                    consentIndex,
+                                                    'label',
+                                                )
+                                            "
                                         />
                                     </div>
-                                </div>
-
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div class="grid gap-2">
-                                        <Label :for="`field-type-${field._uid}`">
-                                            Type
-                                        </Label>
-                                        <select
-                                            :id="`field-type-${field._uid}`"
-                                            v-model="field.type"
-                                            :disabled="readOnly"
-                                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none disabled:opacity-60"
-                                        >
-                                            <option
-                                                v-for="option in fieldTypeOptions"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </option>
-                                        </select>
-                                        <InputError
-                                            :message="fieldError(index, 'type')"
-                                        />
-                                    </div>
-                                    <div class="grid gap-2">
-                                        <Label
-                                            :for="`field-placeholder-${field._uid}`"
-                                        >
-                                            Placeholder
-                                        </Label>
-                                        <Input
-                                            :id="`field-placeholder-${field._uid}`"
-                                            v-model="field.placeholder"
-                                            :disabled="readOnly"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    <input
-                                        :id="`field-required-${field._uid}`"
-                                        v-model="field.required"
-                                        type="checkbox"
+                                    <button
+                                        type="button"
+                                        class="mt-6 rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
                                         :disabled="readOnly"
-                                        class="h-4 w-4 rounded border-input"
-                                    />
-                                    <Label
-                                        :for="`field-required-${field._uid}`"
-                                        class="cursor-pointer"
+                                        aria-label="Remove custom consent"
+                                        @click="removeCustomConsent(consent._uid)"
                                     >
-                                        Required
+                                        <Trash2 class="size-4" />
+                                    </button>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <Label
+                                        :for="`custom-consent-text-${consent._uid}`"
+                                        class="text-xs"
+                                    >
+                                        Consent text
                                     </Label>
+                                    <Textarea
+                                        :id="`custom-consent-text-${consent._uid}`"
+                                        v-model="consent.text"
+                                        rows="3"
+                                        :disabled="readOnly"
+                                        placeholder="What the respondent agrees to."
+                                    />
+                                    <InputError
+                                        :message="
+                                            customConsentError(
+                                                consentIndex,
+                                                'text',
+                                            )
+                                        "
+                                    />
                                 </div>
-
-                                <div
-                                    v-if="fieldTypeRequiresOptions(field.type)"
-                                    class="space-y-2 rounded-md border border-dashed p-3"
-                                >
-                                    <Label>Options</Label>
-                                    <ul class="space-y-1">
-                                        <li
-                                            v-for="(
-                                                option, optionIndex
-                                            ) in field.options"
-                                            :key="optionIndex"
-                                            class="flex items-center justify-between gap-2 rounded border bg-muted/40 px-3 py-1 text-sm"
-                                        >
-                                            <span>{{ option }}</span>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                :disabled="readOnly"
-                                                @click="
-                                                    removeOption(field, optionIndex)
-                                                "
-                                            >
-                                                <Trash2 class="size-3" />
-                                            </Button>
-                                        </li>
-                                    </ul>
-                                    <div class="flex gap-2">
-                                        <Input
-                                            v-model="newOption[field._uid]"
-                                            placeholder="Add option"
-                                            :disabled="readOnly"
-                                            @keydown.enter.prevent="addOption(field)"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            :disabled="readOnly"
-                                            @click="addOption(field)"
-                                        >
-                                            Add
-                                        </Button>
-                                    </div>
-                                </div>
-                            </li>
-                        </template>
-                    </draggable>
-                </section>
-            </div>
-
-            <section class="space-y-3 rounded-lg border p-4" data-test="required-consents-picker">
-                <h2 class="text-sm font-semibold">Required parental consents</h2>
-                <p class="text-xs text-muted-foreground">
-                    Public respondents will see these as required checkboxes. The exact text
-                    shown at submission time is snapshotted on each consent record.
-                </p>
-                <div class="space-y-2">
-                    <label
-                        v-for="option in consentOptions"
-                        :key="option.value"
-                        class="flex items-start gap-3 rounded-md border p-3 text-sm"
-                    >
-                        <input
-                            v-model="builder.required_consents"
-                            type="checkbox"
-                            :value="option.value"
-                            :disabled="readOnly"
-                            class="mt-1 h-4 w-4 rounded border-input"
-                            :data-test="`consent-toggle-${option.value}`"
-                        />
-                        <span class="flex-1 space-y-1">
-                            <span class="block font-medium">{{ option.label }}</span>
-                            <span class="block text-xs text-muted-foreground">
-                                {{ option.text }}
-                            </span>
-                        </span>
-                    </label>
+                                <InputError
+                                    :message="
+                                        customConsentError(
+                                            consentIndex,
+                                            'key',
+                                        )
+                                    "
+                                />
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </section>
+            </main>
 
-            <div class="flex justify-end">
-                <Button type="submit" :disabled="builder.processing || readOnly">
-                    Save changes
-                </Button>
-            </div>
-        </form>
+            <aside
+                class="hidden overflow-y-auto border-l bg-card lg:block"
+            >
+                <div v-if="selectedField" class="space-y-6 p-5">
+                    <div class="flex items-center gap-2 border-b pb-3">
+                        <component
+                            :is="fieldTypeIcons[selectedField.type]"
+                            class="size-5 text-muted-foreground"
+                        />
+                        <h2 class="text-base font-medium">
+                            {{
+                                selectedField.label ||
+                                fieldTypeLabel(selectedField.type)
+                            }}
+                        </h2>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label :for="`config-label-${selectedField._uid}`">
+                            Label
+                        </Label>
+                        <Input
+                            :id="`config-label-${selectedField._uid}`"
+                            v-model="selectedField.label"
+                            placeholder="First name"
+                            :disabled="readOnly"
+                        />
+                        <InputError
+                            :message="fieldError(selectedFieldIndex, 'label')"
+                        />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label :for="`config-type-${selectedField._uid}`">
+                            Type
+                        </Label>
+                        <select
+                            :id="`config-type-${selectedField._uid}`"
+                            v-model="selectedField.type"
+                            :disabled="readOnly"
+                            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus:outline-none disabled:opacity-60"
+                        >
+                            <option
+                                v-for="option in fieldTypeOptions"
+                                :key="option.value"
+                                :value="option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <InputError
+                            :message="fieldError(selectedFieldIndex, 'type')"
+                        />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <Label
+                            :for="`config-placeholder-${selectedField._uid}`"
+                        >
+                            Placeholder
+                        </Label>
+                        <Input
+                            :id="`config-placeholder-${selectedField._uid}`"
+                            v-model="selectedField.placeholder"
+                            :disabled="readOnly"
+                        />
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-0.5">
+                            <Label class="text-sm font-medium">Required</Label>
+                            <p class="text-xs text-muted-foreground">
+                                Make this field required or optional.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            :aria-checked="selectedField.required"
+                            :disabled="readOnly"
+                            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="
+                                selectedField.required
+                                    ? 'bg-primary'
+                                    : 'bg-muted-foreground/30'
+                            "
+                            @click="
+                                selectedField.required = !selectedField.required
+                            "
+                        >
+                            <span
+                                class="inline-block size-4 transform rounded-full bg-white shadow transition"
+                                :class="
+                                    selectedField.required
+                                        ? 'translate-x-[1.125rem]'
+                                        : 'translate-x-0.5'
+                                "
+                            />
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="fieldTypeRequiresOptions(selectedField.type)"
+                        class="space-y-2 border-t pt-4"
+                    >
+                        <Label>Options</Label>
+                        <ul
+                            v-if="(selectedField.options ?? []).length > 0"
+                            class="space-y-1"
+                        >
+                            <li
+                                v-for="(
+                                    option, optionIndex
+                                ) in selectedField.options"
+                                :key="`${selectedField._uid}-${optionIndex}`"
+                                class="flex items-center justify-between gap-2 rounded border bg-muted/40 px-3 py-1 text-sm"
+                            >
+                                <span class="truncate">{{ option }}</span>
+                                <button
+                                    type="button"
+                                    class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="readOnly"
+                                    :aria-label="`Remove option ${option}`"
+                                    @click="removeOption(optionIndex)"
+                                >
+                                    <Trash2 class="size-3.5" />
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="flex gap-2">
+                            <Input
+                                v-model="newOption[selectedField._uid]"
+                                placeholder="Add option"
+                                :disabled="readOnly"
+                                @keydown.enter.prevent="addOption"
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                :disabled="readOnly"
+                                @click="addOption"
+                            >
+                                Add
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-else
+                    class="flex h-full flex-col items-center justify-center gap-2 p-6 text-center"
+                >
+                    <Settings2 class="size-6 text-muted-foreground" />
+                    <p class="text-sm font-medium">No field selected</p>
+                    <p class="text-xs text-muted-foreground">
+                        Click a field in the canvas to edit its settings.
+                    </p>
+                </div>
+            </aside>
+        </div>
     </div>
 </template>

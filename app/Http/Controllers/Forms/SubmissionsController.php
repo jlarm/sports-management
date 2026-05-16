@@ -265,7 +265,9 @@ final class SubmissionsController extends Controller
             ->map(fn (Consent $consent): array => [
                 'id' => $consent->id,
                 'type' => $consent->consent_type->value,
-                'type_label' => $consent->consent_type->label(),
+                'type_label' => $consent->consent_label !== null && $consent->consent_label !== ''
+                    ? $consent->consent_label
+                    : $consent->consent_type->label(),
                 'version' => $consent->consent_text_version,
                 'accepted_at' => $consent->accepted_at->toIso8601String(),
                 'text_snapshot' => $consent->consent_text_snapshot,

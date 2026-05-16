@@ -27,6 +27,7 @@ final class FormResource extends JsonResource
             'schema' => $this->schema,
             'schema_version' => $this->schema_version,
             'required_consents' => $this->required_consents ?? [],
+            'custom_consents' => $this->customConsents(),
         ];
     }
 }
